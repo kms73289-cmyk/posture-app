@@ -12,7 +12,6 @@ class SettingsPage(tk.Frame):
         super().__init__(parent, bg=BG_APP, **kwargs)
         self.data_manager = data_manager
         self.app_settings = app_settings
-        self._stretch_var    = tk.IntVar(value=app_settings.stretch_goal)
 
         self._build_scroll_container()
         self._build(self._inner)
@@ -55,39 +54,15 @@ class SettingsPage(tk.Frame):
         HoverDropdown(
             root,
             options=[
-                (5,  "5초",  "(추천)"),
-                (10, "10초"),
-                (15, "15초"),
-                (30, "30초"),
-                (60, "1분"),
+                (10,   "10초"),
+                (60,   "1분"),
+                (600,  "10분"),
+                (1800, "30분"),
+                (3600, "1시간"),
             ],
             selected=self.app_settings.alert_interval,
             on_change=lambda v: setattr(self.app_settings, "alert_interval", v),
         ).pack(anchor="w", padx=20, pady=(0, 6))
-
-        tk.Frame(root, bg=CLR_BORDER, height=1).pack(fill="x", padx=20, pady=(10, 16))
-
-        # ── 스트레칭 목표 ─────────────────────────────────────────────────────
-        self._section(root, "스트레칭 목표",
-                      "하루에 달성할 스트레칭 횟수 목표를 설정합니다.")
-        stretch_card = tk.Frame(root, bg=BG_CARD,
-                                 highlightbackground=CLR_BORDER, highlightthickness=1)
-        stretch_card.pack(fill="x", padx=20, pady=(0, 6))
-
-        sr = tk.Frame(stretch_card, bg=BG_CARD)
-        sr.pack(fill="x", padx=16, pady=16)
-        tk.Label(sr, text="일일 스트레칭 목표", bg=BG_CARD, fg=TEXT_PRI,
-                 font=(FONT, 10)).pack(side="left")
-        tk.Label(sr, text="(1 ~ 20회)", bg=BG_CARD, fg=TEXT_HINT,
-                 font=(FONT, 8)).pack(side="left", padx=(8, 0))
-
-        self._stepper(
-            stretch_card,
-            var=self._stretch_var,
-            min_val=1, max_val=20, step=1,
-            unit="회",
-            on_change=lambda v: setattr(self.app_settings, "stretch_goal", v),
-        )
 
         tk.Frame(root, bg=CLR_BORDER, height=1).pack(fill="x", padx=20, pady=(10, 16))
 

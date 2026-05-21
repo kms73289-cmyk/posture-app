@@ -6,7 +6,6 @@ DATA_FILE       = os.path.join(DATA_DIR, "posture_data.json")
 SCORE_INTERVAL  = 5      # seconds between score saves
 CAM_DISPLAY_W   = 500    # camera display width px
 SESSION_GAP_SEC = 120    # gap (sec) before starting a new session
-STRETCH_GOAL    = 5      # daily stretching goal count
 PSI_MIN         = 5      # 최소 PSI 점수 (완벽한 자세)
 PSI_MAX         = 18     # 최대 PSI 점수 (최악의 자세)
 
@@ -34,8 +33,8 @@ CLR_RED    = "#E53E3E"
 def score_color(psi):
     """PSI 점수(5~18) → 색상. 낮을수록 좋음."""
     if psi is None: return CLR_BORDER
-    if psi <= 5:  return CLR_GOOD
-    if psi <= 8:  return CLR_BLUE
+    if psi <= 5:  return CLR_BLUE
+    if psi <= 8:  return CLR_GOOD
     if psi <= 12: return CLR_WARN
     if psi <= 15: return CLR_DANGER
     return CLR_RED

@@ -11,6 +11,7 @@ from ui.dashboard      import DashboardPage
 from ui.monitor        import MonitorPage
 from ui.history        import HistoryPage
 from ui.report         import ReportPage
+from ui.alerts         import AlertsPage
 from ui.settings       import SettingsPage
 from ui.camera_window  import CameraMonitorWindow
 
@@ -189,15 +190,7 @@ class MainApp:
             self.data_manager,
             self.app_settings,
         )
-        # stubs
-        for key, title in [("alerts", "알림 기록")]:
-            page = tk.Frame(self.content, bg=BG_APP)
-            page.place(relx=0, rely=0, relwidth=1, relheight=1)
-            tk.Label(page, text=title, bg=BG_APP, fg=TEXT_PRI,
-                     font=(FONT, 20, "bold")).pack(expand=True)
-            tk.Label(page, text="준비 중입니다.", bg=BG_APP, fg=TEXT_HINT,
-                     font=(FONT, 12)).pack()
-            self._pages[key] = page
+        self._pages["alerts"] = make(AlertsPage, self.data_manager)
 
         # hide all
         for page in self._pages.values():
@@ -229,9 +222,11 @@ class MainApp:
 
         self._pages[page_key].place(relx=0, rely=0, relwidth=1, relheight=1)
 
-        # 리포트 페이지 진입 시 즉시 갱신
+        # 페이지 진입 시 즉시 갱신
         if page_key == "report":
             self._pages["report"].refresh()
+        elif page_key == "alerts":
+            self._pages["alerts"].refresh()
 
     # ── camera / monitoring ───────────────────────────────────────────────────
     def _open_camera(self):

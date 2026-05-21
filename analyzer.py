@@ -154,7 +154,7 @@ class PostureAnalyzer:
         total = (axis1 * 2) + axis2 + axis3 + axis4
         return total, axis1, axis2, axis3, axis4
 
-    def _send_alert(self, grade, label):
+    def _send_alert(self, grade, label, snapshot=None):
         now = time.time()
         if now - self.last_alert_time < self.alert_interval:
             return
@@ -170,7 +170,7 @@ class PostureAnalyzer:
         if msg:
             self.last_alert_time = now
             if self._alert_callback:
-                self._alert_callback(msg, severity)
+                self._alert_callback(msg, severity, snapshot=snapshot)
 
     # ── main processing ───────────────────────────────────────────────────────
     def process_frame(self, frame):
@@ -243,7 +243,16 @@ class PostureAnalyzer:
             psi, ax1, ax2, ax3, ax4 = self._calc_psi(neck_flex_deg, fwd_dist, lt, st)
             grade, label = score_grade(psi)
             state.update(axis1=ax1, axis2=ax2, axis3=ax3, axis4=ax4)
-            self._send_alert(grade, label)
+            snapshot = {
+                "score":        psi,
+                "axis1":        ax1,       "axis2":        ax2,
+                "axis3":        ax3,       "axis4":        ax4,
+                "neck_flexion": neck_flex_deg,
+                "forward_dist": fwd_dist,
+                "lateral_tilt": lt,
+                "shoulder_tilt": st,
+            }
+            self._send_alert(grade, label, snapshot=snapshot)
 
             col_bgr = {
                 "#2ECC9A": (154, 204, 46),

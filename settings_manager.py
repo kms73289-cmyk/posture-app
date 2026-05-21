@@ -5,8 +5,7 @@ import os
 SETTINGS_FILE = r"C:\storage\med\app_settings.json"
 
 DEFAULTS = {
-    "alert_interval": 5,    # 경고 알림 간격 (초) — 기본값 5초
-    "stretch_goal":   5,    # 일일 스트레칭 목표 횟수
+    "alert_interval": 60,   # 경고 알림 간격 (초) — 기본값 1분
 }
 
 
@@ -44,11 +43,4 @@ class AppSettings:
     def alert_interval(self, value):
         self.set("alert_interval", int(value))
 
-    @property
-    def stretch_goal(self):
-        return int(self._data.get("stretch_goal", DEFAULTS["stretch_goal"]))
-
-    @stretch_goal.setter
-    def stretch_goal(self, value):
-        self.set("stretch_goal", int(value))
 

@@ -116,28 +116,6 @@ class ReportPage(tk.Frame):
         self._grade_canvas.pack(fill="x", padx=12, pady=(0, 12))
         self._grade_canvas.bind("<Configure>", lambda e: self._draw_grade_dist())
 
-        # 스트레칭 달성률
-        stretch_wrap = self._section_card(root, "스트레칭 달성률")
-        si = tk.Frame(stretch_wrap, bg=BG_CARD)
-        si.pack(fill="x", padx=16, pady=(0, 16))
-
-        top_row = tk.Frame(si, bg=BG_CARD)
-        top_row.pack(fill="x", pady=(0, 6))
-        self._stretch_count_lbl = tk.Label(top_row, text="0 / 5회",
-                                            bg=BG_CARD, fg=TEXT_PRI,
-                                            font=(FONT, 13, "bold"))
-        self._stretch_count_lbl.pack(side="left")
-        self._stretch_hint_lbl = tk.Label(top_row, text="",
-                                           bg=BG_CARD, fg=TEXT_HINT,
-                                           font=(FONT, 9))
-        self._stretch_hint_lbl.pack(side="left", padx=(12, 0))
-
-        bar_bg = tk.Frame(si, bg=CLR_BORDER, height=12)
-        bar_bg.pack(fill="x")
-        self._stretch_bar    = tk.Frame(bar_bg, bg=CLR_GOOD, height=12, width=0)
-        self._stretch_bar.place(x=0, y=0, relheight=1)
-        self._stretch_bar_bg = bar_bg
-
         # 인사이트
         insight_wrap = self._section_card(root, "인사이트")
         self._insight_lbl = tk.Label(insight_wrap, text="",
@@ -200,7 +178,7 @@ class ReportPage(tk.Frame):
 
     def _aggregate(self):
         dates  = self._get_date_range()
-        all_scores, total_dur, total_alerts, total_stretch = [], 0, 0, 0
+        all_scores, total_dur, total_alerts = [], 0, 0
         grade_counts = {"완벽": 0, "허용": 0, "주의": 0, "경고": 0, "위험": 0}
         hourly_raw   = {}
 
@@ -214,9 +192,8 @@ class ReportPage(tk.Frame):
                         all_scores.append(sc)
                         g, _ = score_grade(sc)
                         grade_counts[g] = grade_counts.get(g, 0) + 1
-                total_dur     += summary["total_duration"]
-                total_alerts  += summary["alert_count"]
-                total_stretch += summary["stretches"]
+                total_dur    += summary["total_duration"]
+                total_alerts += summary["alert_count"]
 
             for h, sc in self.data_manager.get_hourly_scores(d_str).items():
                 hourly_raw.setdefault(h, []).append(sc)
@@ -231,7 +208,6 @@ class ReportPage(tk.Frame):
             "duration":     total_dur,
             "ratio":        ratio,
             "alerts":       total_alerts,
-            "stretch":      total_stretch,
             "grade_counts": grade_counts,
             "hourly":       hourly_avg,
         }
@@ -282,19 +258,6 @@ class ReportPage(tk.Frame):
             fg=CLR_DANGER if data["alerts"] > 5 else TEXT_PRI,
         )
 
-        # 스트레칭
-        goal  = self.app_settings.stretch_goal
-        count = data["stretch"]
-        self._stretch_count_lbl.config(
-            text=f"{count} / {goal}회",
-            fg=CLR_GOOD if count >= goal else TEXT_PRI,
-        )
-        self._stretch_hint_lbl.config(
-            text="목표 달성!" if count >= goal else f"목표까지 {goal - count}회 남았습니다.",
-            fg=CLR_GOOD if count >= goal else TEXT_HINT,
-        )
-        self.after(60, lambda: self._update_stretch_bar(count, goal))
-
         # 인사이트
         self._insight_lbl.config(text=self._generate_insight(data))
 
@@ -302,14 +265,6 @@ class ReportPage(tk.Frame):
         self._draw_bar_chart()
         self._draw_hourly()
         self._draw_grade_dist()
-
-    def _update_stretch_bar(self, count, goal):
-        bw = self._stretch_bar_bg.winfo_width()
-        if bw > 1:
-            ratio = min(1.0, count / max(goal, 1))
-            self._stretch_bar.place(x=0, y=0, relheight=1,
-                                    width=int(bw * ratio))
-            self._stretch_bar.config(bg=CLR_GOOD if count >= goal else ACCENT)
 
     # ── 점수 추이 막대 차트 ───────────────────────────────────────────────────
     def _draw_bar_chart(self):
@@ -424,7 +379,7 @@ class ReportPage(tk.Frame):
         bar_w  = w - pad_x * 2
         GRADE_ORDER  = ["완벽", "허용", "주의", "경고", "위험"]
         GRADE_COLORS = {
-            "완벽": CLR_GOOD, "허용": CLR_BLUE,
+            "완벽": CLR_BLUE, "허용": CLR_GOOD,
             "주의": CLR_WARN, "경고": CLR_DANGER, "위험": CLR_DANGER,
         }
 
@@ -498,7 +453,7 @@ class ReportPage(tk.Frame):
             else:
                 lines.append(
                     f"바른 자세 비율이 {ratio:.0f}%로 낮습니다. "
-                    "1시간마다 스트레칭을 추가해보세요."
+                    "자세 교정에 더 신경써주세요."
                 )
 
         # 최악 시간대
@@ -515,16 +470,6 @@ class ReportPage(tk.Frame):
             lines.append(
                 f"경고가 {data['alerts']}회 발생했습니다. "
                 "알림 간격을 줄이거나 자세 교정 운동을 늘려보세요."
-            )
-
-        # 스트레칭 목표
-        goal = self.app_settings.stretch_goal
-        if data["stretch"] >= goal:
-            lines.append(f"스트레칭 목표({goal}회)를 달성했습니다.")
-        elif data["stretch"] > 0:
-            lines.append(
-                f"스트레칭을 {data['stretch']}회 했습니다. "
-                f"목표({goal}회)까지 {goal - data['stretch']}회 남았습니다."
             )
 
         return "\n".join(lines)

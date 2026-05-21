@@ -10,15 +10,7 @@ from config import (
     score_color, score_grade, score_label_ko, score_desc_ko,
     fmt_duration_ko,
 )
-STRETCH_GOAL_DEFAULT = 5
 from ui.widgets import MetricCard, ScoreRingCanvas
-
-TIPS = [
-    ("모니터 높이",   "화면 상단이 눈높이와 같거나 약간 낮게 두세요."),
-    ("발 위치",       "발바닥이 바닥에 완전히 닿도록 의자 높이를 조정하세요."),
-    ("허리 지지",     "허리 쿠션으로 요추 곡선을 자연스럽게 유지하세요."),
-    ("20-20-20 규칙", "20분마다 20초간 6m 거리를 바라보세요."),
-]
 
 # y축 기준선 (PSI 점수 경계, 낮을수록 좋음 → 높은 위치 = 낮은 PSI)
 CHART_GUIDES = [
@@ -60,12 +52,6 @@ class DashboardPage(tk.Frame):
         self._canvas.bind("<Configure>", self._on_canvas_configure)
         self._canvas.bind("<Enter>", lambda e: self._canvas.bind_all("<MouseWheel>", self._on_mousewheel))
         self._canvas.bind("<Leave>", lambda e: self._canvas.unbind_all("<MouseWheel>"))
-
-    @property
-    def _stretch_goal(self):
-        if self.app_settings:
-            return self.app_settings.stretch_goal
-        return STRETCH_GOAL_DEFAULT
 
     def _on_inner_configure(self, e):
         self._canvas.configure(scrollregion=self._canvas.bbox("all"))
@@ -117,19 +103,11 @@ class DashboardPage(tk.Frame):
         cards_row = tk.Frame(root, bg=BG_APP)
         cards_row.pack(fill="x", padx=20, pady=12)
 
-        self._card_score   = MetricCard(cards_row, "오늘 자세 점수", "--", "", TEXT_PRI)
-        self._card_time    = MetricCard(cards_row, "바른 자세 시간", "--", "", CLR_GOOD)
-        self._card_alerts  = MetricCard(cards_row, "경고 횟수",      "--", "", CLR_DANGER)
-        self._card_stretch = MetricCard(cards_row, "스트레칭 완료",  "--",
-                                         f"오늘 목표  {self._stretch_goal}회", TEXT_PRI)
-        for card in (self._card_score, self._card_time,
-                     self._card_alerts, self._card_stretch):
+        self._card_score  = MetricCard(cards_row, "오늘 자세 점수", "--", "", TEXT_PRI)
+        self._card_time   = MetricCard(cards_row, "바른 자세 시간", "--", "", CLR_GOOD)
+        self._card_alerts = MetricCard(cards_row, "경고 횟수",      "--", "", CLR_DANGER)
+        for card in (self._card_score, self._card_time, self._card_alerts):
             card.pack(side="left", fill="x", expand=True, padx=(0, 10), ipady=4)
-
-        tk.Button(self._card_stretch, text="+ 완료", bg=BG_ACTIVE, fg=ACCENT,
-                  bd=0, font=(FONT, 8, "bold"), padx=8, pady=3, cursor="hand2",
-                  activebackground=BG_ACTIVE,
-                  command=self._on_stretch).pack(anchor="e", padx=14, pady=(0, 8))
 
         # ── 바른 자세 비율 바 (전체 대비) ────────────────────────────────────
         ratio_card = tk.Frame(root, bg=BG_CARD,
@@ -177,7 +155,7 @@ class DashboardPage(tk.Frame):
         # 범례
         leg = tk.Frame(chart_hdr, bg=BG_CARD)
         leg.pack(side="right")
-        for lbl, clr in [("완벽 5", CLR_GOOD), ("허용 6-8", CLR_BLUE),
+        for lbl, clr in [("완벽 5", CLR_BLUE), ("허용 6-8", CLR_GOOD),
                           ("주의 9-12", CLR_WARN), ("경고+ 13+", CLR_DANGER)]:
             tk.Label(leg, text="●", bg=BG_CARD, fg=clr,
                      font=(FONT, 9)).pack(side="left", padx=(4, 0))
@@ -207,36 +185,10 @@ class DashboardPage(tk.Frame):
                                      font=(FONT, 8), wraplength=180, justify="center")
         self._gauge_desc.pack(pady=(2, 12))
 
-        # ── bottom: tips (full width) ─────────────────────────────────────────
-        tips_card = tk.Frame(root, bg=BG_CARD,
-                              highlightbackground=CLR_BORDER, highlightthickness=1)
-        tips_card.pack(fill="x", padx=20, pady=(0, 20))
-        tk.Label(tips_card, text="자세 개선 팁", bg=BG_CARD, fg=TEXT_PRI,
-                 font=(FONT, 11, "bold")).pack(anchor="nw", padx=14, pady=(12, 6))
-        self._build_tips(tips_card)
-
-    def _build_tips(self, parent):
-        grid = tk.Frame(parent, bg=BG_CARD)
-        grid.pack(fill="x", padx=10, pady=(0, 12))
-        for i, (title, desc) in enumerate(TIPS):
-            r = i // 2
-            c = i % 2
-            cell = tk.Frame(grid, bg=BG_APP,
-                            highlightbackground=CLR_BORDER, highlightthickness=1)
-            cell.grid(row=r, column=c, padx=4, pady=4, sticky="nsew")
-            grid.columnconfigure(c, weight=1)
-            tk.Label(cell, text=title, bg=BG_APP, fg=TEXT_PRI,
-                     font=(FONT, 9, "bold"), wraplength=200, justify="left").pack(
-                anchor="nw", padx=10, pady=(8, 2))
-            tk.Label(cell, text=desc, bg=BG_APP, fg=TEXT_SEC,
-                     font=(FONT, 8), wraplength=200, justify="left").pack(
-                anchor="nw", padx=10, pady=(0, 8))
-
     # ── data refresh ──────────────────────────────────────────────────────────
     def refresh(self):
         today   = date.today().isoformat()
         summary = self.data_manager.get_day_summary(today)
-        stretch = self.data_manager.get_stretch_count(today)
 
         if summary:
             avg        = summary["avg_score"]
@@ -265,11 +217,6 @@ class DashboardPage(tk.Frame):
             self._gauge_desc.config(text="모니터링을 시작하면\n점수가 기록됩니다")
             self._update_ratio_bar(0, 0)
 
-        self._card_stretch.update(
-            f"{stretch} / {self._stretch_goal}",
-            f"오늘 목표  {self._stretch_goal}회",
-            CLR_GOOD if stretch >= self._stretch_goal else TEXT_PRI,
-        )
         self._draw_chart()
 
     def _update_ratio_bar(self, good_sec, total_sec):
@@ -361,10 +308,6 @@ class DashboardPage(tk.Frame):
     def _on_stop_click(self):
         if self.on_stop_monitoring:
             self.on_stop_monitoring()
-
-    def _on_stretch(self):
-        self.data_manager.add_stretch()
-        self.refresh()
 
     def set_monitoring_active(self, active: bool):
         self._monitoring_active = active

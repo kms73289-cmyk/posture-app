@@ -118,7 +118,7 @@ class CalendarWidget(tk.Frame):
         # legend
         leg = tk.Frame(self, bg=BG_APP, pady=4)
         leg.pack(fill="x", padx=4)
-        for lbl, clr in [("완벽 5", CLR_GOOD), ("허용 6-8", CLR_BLUE),
+        for lbl, clr in [("완벽 5", CLR_BLUE), ("허용 6-8", CLR_GOOD),
                           ("주의 9-12", CLR_WARN), ("경고+ 13+", CLR_DANGER)]:
             dot = tk.Label(leg, text="●", bg=BG_APP, fg=clr, font=(FONT, 10))
             dot.pack(side="left", padx=(4, 1))

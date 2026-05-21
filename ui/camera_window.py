@@ -36,10 +36,15 @@ class CameraMonitorWindow(tk.Toplevel):
         self._frame_lock       = threading.Lock()
         self.last_save_time        = 0.0
         self.session_start         = time.time()
-        self.session_scores        = []
+        self.session_scores        = []   # best 추적용 (소규모 유지)
+        self._session_sum          = 0.0
+        self._session_count        = 0
+        self._session_best         = float("inf")
         self._calibration_done     = False
-        self._banner_active         = False  # 현재 배너 표시 사이클 중인지
-        self._banner_cooldown_start = None  # 쿨다운 시작 시각 (None = 쿨다운 없음)
+        self._banner_active         = False
+        self._banner_cooldown_start = None
+        self._last_photo            = None   # PhotoImage GC 방지 + 중복 방지용
+        self._last_frame_id         = None   # 동일 프레임 재처리 방지
 
         self._build_ui()
         self.protocol("WM_DELETE_WINDOW", self.withdraw)
@@ -157,7 +162,13 @@ class CameraMonitorWindow(tk.Toplevel):
             self._preloaded_analyzer = None
         else:
             self.analyzer = PostureAnalyzer()
-        self.analyzer.set_alert_callback(self.data_manager.add_alert)
+        def _alert_cb(msg, severity, snapshot=None):
+            with self._frame_lock:
+                data = self._frame_data
+            frame_copy = data[0].copy() if data is not None else None
+            self.data_manager.add_alert(msg, severity, frame=frame_copy, snapshot=snapshot)
+
+        self.analyzer.set_alert_callback(_alert_cb)
         self.analyzer.start_calibration()
 
     def _camera_loop(self):
@@ -174,7 +185,13 @@ class CameraMonitorWindow(tk.Toplevel):
             frame, state = self.analyzer.process_frame(frame)
             with self._frame_lock:
                 self._frame_data = (frame, state)
-            time.sleep(0.03)
+
+            # 창이 보일 때 ~10fps, 백그라운드일 때 ~2fps
+            try:
+                visible = self.winfo_viewable()
+            except Exception:
+                visible = True
+            time.sleep(0.08 if visible else 0.5)
         cap.release()
 
     # ── UI refresh loop ───────────────────────────────────────────────────────
@@ -193,13 +210,17 @@ class CameraMonitorWindow(tk.Toplevel):
 
         if data is not None:
             frame, state = data
-            h, w = frame.shape[:2]
-            disp_h = int(h * CAM_DISPLAY_W / w)
-            resized = cv2.resize(frame, (CAM_DISPLAY_W, disp_h))
-            img   = Image.fromarray(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
-            photo = ImageTk.PhotoImage(image=img)
-            self.cam_lbl.configure(image=photo)
-            self.cam_lbl.image = photo
+            # 동일 프레임이면 PhotoImage 재생성 생략 (가장 비싼 연산)
+            fid = id(frame)
+            if fid != self._last_frame_id:
+                self._last_frame_id = fid
+                h, w   = frame.shape[:2]
+                disp_h = int(h * CAM_DISPLAY_W / w)
+                resized = cv2.resize(frame, (CAM_DISPLAY_W, disp_h))
+                img     = Image.fromarray(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
+                photo   = ImageTk.PhotoImage(image=img)
+                self._last_photo = photo        # GC 방지
+                self.cam_lbl.configure(image=photo)
 
             if not state["calibrated"]:
                 rem = state.get("calib_remaining", 0)
@@ -250,9 +271,12 @@ class CameraMonitorWindow(tk.Toplevel):
                 m, s = divmod(elapsed, 60)
                 self.lbl_duration.config(text=f"{m:02d}:{s:02d}")
 
-                self.session_scores.append(score)
-                avg  = sum(self.session_scores) / len(self.session_scores)
-                best = min(self.session_scores)   # PSI: 낮을수록 좋음
+                self._session_sum   += score
+                self._session_count += 1
+                if score < self._session_best:
+                    self._session_best = score
+                avg  = self._session_sum / self._session_count
+                best = self._session_best
                 self.lbl_avg.config(text=f"{avg:.1f}점", fg=score_color(avg))
                 self.lbl_low.config(text=f"{best:.1f}점", fg=score_color(best))
 
@@ -288,7 +312,7 @@ class CameraMonitorWindow(tk.Toplevel):
                 calibrated=state["calibrated"],
             )
 
-        self.after(33, self._refresh_ui)
+        self.after(100, self._refresh_ui)
 
     # ── controls ──────────────────────────────────────────────────────────────
     def _recalibrate(self):
@@ -296,9 +320,12 @@ class CameraMonitorWindow(tk.Toplevel):
             return
         self.analyzer.start_calibration()
         self.session_scores.clear()
-        self.session_start     = time.time()
-        self.last_save_time    = 0.0
-        self._calibration_done      = False
+        self._session_sum          = 0.0
+        self._session_count        = 0
+        self._session_best         = float("inf")
+        self.session_start         = time.time()
+        self.last_save_time        = 0.0
+        self._calibration_done     = False
         self._banner_active         = False
         self._banner_cooldown_start = None
         self._warning_banner.hide_immediately()

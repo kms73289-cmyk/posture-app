@@ -112,7 +112,6 @@ class DayDetailPanel(tk.Frame):
             ("바른 자세 시간", fmt_duration_ko(summary["good_posture_sec"]),   CLR_GOOD),
             ("경고 횟수",      f"{summary['alert_count']}회",
              CLR_DANGER if summary["alert_count"] > 0 else TEXT_SEC),
-            ("스트레칭",       f"{summary.get('stretches', 0)}회",             CLR_BLUE),
         ]
         for stat_label, stat_val, stat_col in stats:
             row = tk.Frame(self, bg=BG_APP,
