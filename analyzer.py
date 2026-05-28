@@ -4,7 +4,7 @@ import numpy as np
 import time
 from collections import deque
 
-from config import score_color, score_grade
+from config import score_color, score_grade, NECK_SLOPE, NECK_OFFSET, FWDIST_SLOPE, FWDIST_OFFSET
 
 try:
     from plyer import notification
@@ -30,7 +30,7 @@ class PostureAnalyzer:
         self.shoulder_buffer = deque(maxlen=20)
         self.nose_buffer     = deque(maxlen=20)
         self.eye_buffer      = deque(maxlen=20)  # (eye_dy, eye_dx) 스무딩용
-        self.eye_w_buffer    = deque(maxlen=20)  # 눈 사이 거리 스무딩용
+        self.eye_w_buffer    = deque(maxlen=40)  # 눈 사이 거리 스무딩용 (앞돌출 노이즈 억제)
         self.last_alert_time = 0
         self.alert_interval  = 30
         self.calib_start     = time.time()
@@ -112,21 +112,23 @@ class PostureAnalyzer:
         """PSI 채점: 4축 독립 채점 후 가중 합산. 범위 5-18, 낮을수록 좋음.
         W1=2 (목 전방 기울기), W2=1 (머리 앞돌출), W3=1 (측방), W4=1 (어깨)
         """
-        # 축1: 목 전방 기울기 (후신전은 정상 처리)
-        if neck_flex_deg <= 10:
+        # 축1: 목 전방 기울기 (후신전·0–5° → 1점, 최대 4점)
+        if neck_flex_deg <= 5:
             axis1 = 1
-        elif neck_flex_deg <= 20:
+        elif neck_flex_deg <= 10:
             axis1 = 2
-        else:
+        elif neck_flex_deg <= 15:
             axis1 = 3
+        else:
+            axis1 = 4
 
-        # 축2: 머리 앞돌출 (귀 너비 비율, 양수 = 기준보다 가까워짐)
-        fwd_r = max(0.0, forward_dist)
-        if fwd_r <= 0.07:
+        # 축2: 머리 앞돌출 (실제 cm, 보정 완료된 값)
+        fwd_r = forward_dist  # 이미 max(0,...) 적용된 cm 값
+        if fwd_r <= 5.0:
             axis2 = 1
-        elif fwd_r <= 0.15:
+        elif fwd_r <= 10.0:
             axis2 = 2
-        elif fwd_r <= 0.25:
+        elif fwd_r <= 15.0:
             axis2 = 3
         else:
             axis2 = 4
@@ -232,12 +234,16 @@ class PostureAnalyzer:
                 state["calibrated"] = True
         else:
             # 목 굴곡도: world_landmarks 기반 atan2 각도 - 기준 설정값
+            # 선형 보정 적용: 실제각도 = NECK_SLOPE × raw + NECK_OFFSET
             ref_neck      = self.ref_values.get("neck_angle", 0.0)
-            neck_flex_deg = neck_angle_raw - ref_neck
+            raw_flex      = neck_angle_raw - ref_neck
+            neck_flex_deg = raw_flex * NECK_SLOPE + NECK_OFFSET
             state["neck_flexion"] = neck_flex_deg
 
-            ref_ear = self.ref_values.get("eye_w")
-            fwd_dist = ((fd - ref_ear) / ref_ear) if ref_ear else 0.0
+            ref_ear  = self.ref_values.get("eye_w")
+            fwd_ratio = ((fd - ref_ear) / ref_ear) if ref_ear else 0.0
+            # 선형 보정 적용 → 실제 cm 단위로 변환
+            fwd_dist = max(0.0, FWDIST_SLOPE * max(0.0, fwd_ratio) + FWDIST_OFFSET)
             state["forward_dist"] = fwd_dist
 
             psi, ax1, ax2, ax3, ax4 = self._calc_psi(neck_flex_deg, fwd_dist, lt, st)

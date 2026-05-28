@@ -261,7 +261,7 @@ class CameraMonitorWindow(tk.Toplevel):
                 self.lbl_vertical.config(
                     text=f"{nf:.1f}°  [{a1}pt x2]" if nf is not None else "--")
                 self.lbl_forward.config(
-                    text=f"{fd*100:.1f}cm  [{a2}pt]" if fd is not None else "--")
+                    text=f"{fd:.1f}cm  [{a2}pt]" if fd is not None else "--")
                 self.lbl_lateral.config(
                     text=f"{lt:.1f}°  [{a3}pt]" if lt is not None else "--")
                 self.lbl_shoulder.config(

@@ -7,7 +7,17 @@ SCORE_INTERVAL  = 5      # seconds between score saves
 CAM_DISPLAY_W   = 500    # camera display width px
 SESSION_GAP_SEC = 120    # gap (sec) before starting a new session
 PSI_MIN         = 5      # 최소 PSI 점수 (완벽한 자세)
-PSI_MAX         = 18     # 최대 PSI 점수 (최악의 자세)
+PSI_MAX         = 20     # 최대 PSI 점수 (최악의 자세)
+
+# 목 굴곡도 선형 보정: 실제각도 = NECK_SLOPE × 앱측정값 + NECK_OFFSET
+# 샘플: (5→8), (10→18), (15→28) — 3점 완전 일치
+NECK_SLOPE  = 2.0
+NECK_OFFSET = -2.0
+
+# 앞돌출 선형 보정: 실제cm = FWDIST_SLOPE × forward_dist_ratio + FWDIST_OFFSET
+# 샘플: (0.17→5cm), (0.25→10cm), (0.40→15cm) — 최소제곱 피팅
+FWDIST_SLOPE  = 42.12
+FWDIST_OFFSET = -1.51
 
 FONT = "Malgun Gothic"
 
@@ -41,12 +51,12 @@ def score_color(psi):
 
 
 def score_grade(psi):
-    """PSI 점수(5~18) → (한국어 등급, 영문) 튜플."""
+    """PSI 점수(5~20) → (한국어 등급, 영문) 튜플."""
     if psi is None: psi = PSI_MAX
     if psi <= 5:  return "완벽", "Perfect!"
     if psi <= 8:  return "허용", "Good"
     if psi <= 12: return "주의", "Warning"
-    if psi <= 15: return "경고", "Danger"
+    if psi <= 16: return "경고", "Danger"
     return "위험", "Critical!"
 
 
@@ -55,7 +65,7 @@ def score_label_ko(psi):
     if psi <= 5:  return "완벽한 자세"
     if psi <= 8:  return "허용 가능"
     if psi <= 12: return "주의 필요"
-    if psi <= 15: return "즉각 교정"
+    if psi <= 16: return "즉각 교정"
     return "위험 상태"
 
 
@@ -64,7 +74,7 @@ def score_desc_ko(psi):
     if psi <= 5:  return "모든 축에서\n완벽한 자세입니다"
     if psi <= 8:  return "약간의 자세 이탈이\n있으나 허용 범위입니다"
     if psi <= 12: return "자세 교정이 필요합니다.\n바르게 앉아주세요"
-    if psi <= 15: return "즉각적인 자세 교정이\n필요합니다"
+    if psi <= 16: return "즉각적인 자세 교정이\n필요합니다"
     return "즉시 자세를 교정하세요.\n심각한 자세 불량입니다"
 
 

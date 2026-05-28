@@ -46,7 +46,7 @@ class ScoreRingCanvas(tk.Canvas):
                             outline=color, width=lw, style="arc")
             self.create_text(cx, cy - 12, text=f"{score:.1f}",
                              fill=color, font=(FONT, int(s * 0.18), "bold"))
-            self.create_text(cx, cy + 14, text="/ 18",
+            self.create_text(cx, cy + 14, text="/ 20",
                              fill=TEXT_SEC, font=(FONT, int(s * 0.08)))
         else:
             self.create_text(cx, cy, text="--",

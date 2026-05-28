@@ -24,7 +24,7 @@ THUMB_H = 143
 # (레이블, 단위, m→표시단위 배율, 바 최대값, 가중치 표시)
 _AXES = [
     ("축1 목굴곡", "°",  1.0,   30.0, "x2"),
-    ("축2 앞돌출", "cm", 100.0, 15.0, ""),
+    ("축2 앞돌출", "cm",   1.0, 15.0, ""),
     ("축3 측방",   "°",  1.0,   20.0, ""),
     ("축4 어깨",   "°",  1.0,   12.0, ""),
 ]
@@ -37,7 +37,7 @@ class AlertsPage(tk.Frame):
     def __init__(self, parent, data_manager, **kwargs):
         super().__init__(parent, bg=BG_APP, **kwargs)
         self.data_manager = data_manager
-        self._sort_mode   = "score"   # "score" | "time"
+        self._sort_mode   = "time"    # "score" | "time"
         self._img_refs    = []
         self._build_ui()
         self.refresh()
@@ -62,8 +62,8 @@ class AlertsPage(tk.Frame):
                  font=(FONT, 8)).pack(side="left", padx=(0, 6))
         self._btn_score = self._mk_sort_btn(sort_f, "나쁜 자세 순", "score")
         self._btn_time  = self._mk_sort_btn(sort_f, "최근순",       "time")
-        self._btn_score.pack(side="left", padx=(0, 4))
-        self._btn_time.pack(side="left")
+        self._btn_time.pack(side="left", padx=(0, 4))
+        self._btn_score.pack(side="left")
         self._refresh_sort_btns()
 
         tk.Frame(self, bg=CLR_BORDER, height=1).pack(fill="x", padx=20, pady=(10, 0))
