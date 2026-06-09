@@ -17,15 +17,10 @@ from ui.camera_window  import CameraMonitorWindow
 
 
 NAV_ITEMS = [
-    ("메인", None),
-    ("대시보드",      "dashboard"),
-    ("실시간 모니터링", "monitor"),
-    ("리포트",        "report"),
-    ("기록", None),
-    ("히스토리",      "history"),
-    ("알림 기록",     "alerts"),
-    ("설정", None),
-    ("환경 설정",     "settings"),
+    ("자세 측정", "monitor"),
+    ("자세 분석", "report"),
+    ("기록", "history"),
+    ("설정", "settings"),
 ]
 
 
@@ -46,7 +41,7 @@ class MainApp:
             threading.Thread(target=self._preload_analyzer, daemon=True).start()
 
         self._build()
-        self._show_page("dashboard")
+        self._show_page("monitor")
         self._refresh_loop()
 
     def _preload_analyzer(self):
@@ -58,7 +53,15 @@ class MainApp:
         self.root.configure(bg=BG_SIDEBAR)
 
         # sidebar (fixed width)
-        self.sidebar = tk.Frame(self.root, bg=BG_SIDEBAR, width=220)
+        sidebar_width = int(self.root.winfo_screenwidth() * 0.125)
+
+        sidebar_width = max(220, min(280, sidebar_width))
+
+        self.sidebar = tk.Frame(
+            self.root,
+            bg=BG_SIDEBAR,
+            width=sidebar_width
+        )
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
 
@@ -67,7 +70,7 @@ class MainApp:
 
         # content area
         self.content = tk.Frame(self.root, bg=BG_APP)
-        self.content.pack(side="left", fill="both", expand=True)
+        self.content.pack(fill="both", expand=True)
 
         self._build_sidebar()
         self._build_pages()
@@ -77,6 +80,7 @@ class MainApp:
 
         # logo area
         logo_frame = tk.Frame(sb, bg=BG_SIDEBAR, pady=20)
+       
         logo_frame.pack(fill="x")
 
         logo_icon = tk.Label(logo_frame, text="  P", bg=ACCENT, fg="#FFFFFF",

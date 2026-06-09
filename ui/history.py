@@ -1,5 +1,6 @@
 """HistoryPage — calendar + day detail panel."""
 import tkinter as tk
+from ui.alerts import AlertsPage
 from datetime import date
 
 from config import (
@@ -14,47 +15,346 @@ class HistoryPage(tk.Frame):
     def __init__(self, parent, data_manager, **kwargs):
         super().__init__(parent, bg=BG_APP, **kwargs)
         self.data_manager = data_manager
+        self.selected_alerts = []
+        self.alert_page = 0
+
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
+        self.scale = min(screen_w / 1920, screen_h / 1080, 1.0)
+        
         self._build()
 
+    def S(self, v):
+        return max(1, int(v * self.scale))
+
+    
+    
     def _build(self):
-        # page title
-        hdr = tk.Frame(self, bg=BG_APP)
-        hdr.pack(fill="x", padx=20, pady=(18, 8))
-        tk.Label(hdr, text="히스토리", bg=BG_APP, fg=TEXT_PRI,
-                 font=(FONT, 18, "bold")).pack(anchor="w")
-        tk.Label(hdr, text="날짜를 클릭하면 해당 날의 상세 기록을 볼 수 있습니다.",
-                 bg=BG_APP, fg=TEXT_SEC, font=(FONT, 10)).pack(anchor="w")
+    
 
-        tk.Frame(self, bg=CLR_BORDER, height=1).pack(fill="x", padx=20, pady=(0, 10))
+        # 전체 컨테이너
+        container = tk.Frame(self, bg=BG_APP)
+        container.pack(fill="both", expand=True, padx=self.S(55), pady=self.S(35))
 
-        body = tk.Frame(self, bg=BG_APP)
-        body.pack(fill="both", expand=True, padx=20, pady=0)
+        # 제목
+        tk.Label(
+            container,
+            text="기록",
+            bg=BG_APP,
+            fg=TEXT_PRI,
+            font=(FONT, 20, "bold")
+        ).pack(anchor="w")
 
-        # left: calendar
-        cal_wrap = tk.Frame(body, bg=BG_APP)
-        cal_wrap.pack(side="left", fill="both", expand=True, padx=(0, 14))
+        tk.Label(
+            container,
+            text="날짜를 선택하면 해당 날짜의 기록을 확인할 수 있습니다.",
+            bg=BG_APP,
+            fg=TEXT_SEC,
+            font=(FONT, 9)
+        ).pack(anchor="w", pady=(4, 18))
+
+        # 상단 카드 영역
+        top = tk.Frame(container, bg=BG_APP)
+        top.pack(fill="x")
+        top.configure(height=self.S(560))
+        top.pack_propagate(False)
+
+        # 왼쪽 달력 카드
+        cal_card = tk.Frame(
+            top,
+            bg=BG_CARD,
+            highlightbackground=CLR_BORDER,
+            highlightthickness=1,
+        )
+        cal_card.pack(side="left", fill="both", expand=True, padx=(0, 12))
 
         self.cal = CalendarWidget(
-            cal_wrap, self.data_manager,
+            cal_card,
+            self.data_manager,
             on_date_click=self._on_date_click,
         )
-        self.cal.pack(fill="both", expand=True)
+        self.cal.pack(fill="both", expand=True, padx=self.S(12), pady=self.S(12))
 
-        # right: day detail panel
-        detail_wrap = tk.Frame(body, bg=BG_APP, width=300)
-        detail_wrap.pack(side="left", fill="y")
-        detail_wrap.pack_propagate(False)
+        # 오른쪽 상세 카드
+        detail_card = tk.Frame(
+            top,
+            bg=BG_CARD,
+            highlightbackground=CLR_BORDER,
+            highlightthickness=1,
+            width=self.S(470)
+        )
+        detail_card.pack(side="left", fill="both", padx=(12,0))
+        detail_card.pack_propagate(False)
 
-        self._detail_panel = DayDetailPanel(detail_wrap)
+        self._detail_panel = DayDetailPanel(detail_card)
         self._detail_panel.pack(fill="both", expand=True)
+
+
+        # 알림 리스트 영역
+        tk.Label(
+            container,
+            text="알림 기록",
+            bg=BG_APP,
+            fg=TEXT_PRI,
+            font=(FONT, 16, "bold")
+        ).pack(anchor="w", pady=(18, 6))
+        alerts_wrap = tk.Frame(container, bg=BG_APP)
+        alerts_wrap.pack(fill="both",  pady=(0, 0))
+
+        # self._alerts_page = AlertsPage(alerts_wrap, self.data_manager)
+        # self._alerts_page.pack(fill="both", expand=True)
+        self.alert_table = tk.Frame(
+            alerts_wrap,
+            bg=BG_CARD,
+            highlightbackground=CLR_BORDER,
+            highlightthickness=1
+        )
+        self.alert_table.pack(fill="x")
+
+        header = tk.Frame(self.alert_table, bg=BG_CARD)
+        header.pack(fill="x")
+
+        cols = ["No", "시간", "자세 점수", "상태", "주요 문제", ""]
+        widths = [8, 20, 20, 18, 55, 25]
+
+        for col, w in zip(cols, widths):
+            tk.Label(
+                header,
+                text=col,
+                bg=BG_CARD,
+                fg=TEXT_PRI,
+                font=(FONT, 11, "bold"),
+                width=w,
+                pady=8
+            ).pack(side="left")
+
+        self.alert_rows = tk.Frame(self.alert_table, bg=BG_CARD)
+        self.alert_rows.pack(fill="x")
+
+        self._render_alert_rows()
+
+        pager = tk.Frame(alerts_wrap, bg=BG_APP)
+        pager.pack(pady=(10, 0))
+
+        tk.Button(
+            pager,
+            text="<",
+            bg="#E2E8F0",
+            fg=TEXT_PRI,
+            bd=0,
+            width=3,
+            command=lambda: self._change_alert_page(-1)
+        ).pack(side="left", padx=6)
+                
+        self.page_btn = tk.Button(
+            pager,
+            text="1",
+            bg=BG_CARD,
+            fg=ACCENT,
+            bd=1,
+            width=3
+        )
+        self.page_btn.pack(side="left", padx=6)
+
+        tk.Button(
+            pager,
+            text=">",
+            bg="#E2E8F0",
+            fg=TEXT_PRI,
+            bd=0,
+            width=3,
+            command=lambda: self._change_alert_page(1)
+        ).pack(side="left", padx=6)
 
     def _on_date_click(self, date_str):
         summary = self.data_manager.get_day_summary(date_str)
-        alerts  = self.data_manager.get_day_alerts(date_str)
+        alerts = self.data_manager.get_day_alerts(date_str)
+
+        self.selected_alerts = alerts
+        self.alert_page = 0
+
+        self.cal.set_selected_date(date_str)
+
         self._detail_panel.show(date_str, summary, alerts)
+        self._render_alert_rows()
+
+    def _change_alert_page(self, diff):
+        max_page = max(0, (len(self.selected_alerts) - 1) // 3)
+
+        self.alert_page = max(
+            0,
+            min(max_page, self.alert_page + diff)
+        )
+
+        self._render_alert_rows()
+
+    def _get_main_problem(self, alert):
+        problems = []
+
+        checks = [
+            ("목 기울어짐", alert.get("neck_flexion"), 30.0),
+            ("거북목", alert.get("forward_dist"), 15.0),
+            ("몸 기울어짐", alert.get("lateral_tilt"), 20.0),
+            ("어깨 비대칭", alert.get("shoulder_tilt"), 12.0),
+        ]
+
+        for name, value, max_value in checks:
+            if value is None:
+                continue
+
+            try:
+                ratio = abs(float(value)) / max_value
+            except (TypeError, ValueError):
+                continue
+
+            problems.append((ratio, name))
+
+        if not problems:
+            return alert.get("message", "-")
+
+        problems.sort(reverse=True)
+        return problems[0][1]
+
+    def _render_alert_rows(self):
+        for w in self.alert_rows.winfo_children():
+            w.destroy()
+
+        start = self.alert_page * 3
+        alerts = self.selected_alerts[start:start + 3]
+
+        for i in range(3):
+            row = tk.Frame(self.alert_rows, bg=BG_CARD)
+            row.pack(fill="x")
+
+            row_no = start + i + 1
+
+            if i < len(alerts):
+                a = alerts[i]
+
+                score = a.get("score", "-")
+                if isinstance(score, (int, float)):
+                    score = f"{score:.1f}"
+
+                severity = a.get("severity", "-")
+                if severity == "warn":
+                    severity = "주의"
+                elif severity == "danger":
+                    severity = "경고"
+                elif severity == "info":
+                    severity = "정보"
+
+                values = [
+                    str(row_no),
+                    a.get("time", "-"),
+                    score,
+                    severity,
+                     self._get_main_problem(a),
+                    "상세 보기 >"
+                ]
+            else:
+                values = ["", "", "", "", "", ""]
+
+            widths = [8, 20, 20, 18, 55, 25]
+
+            for idx, (value, w) in enumerate(zip(values, widths)):
+                if idx == len(values) - 1 and value:
+                    tk.Button(
+                        row,
+                        text=value,
+                        bg=BG_CARD,
+                        fg=ACCENT,
+                        font=(FONT, 11, "bold"),
+                        bd=0,
+                        width=w,
+                        cursor="hand2",
+                        command=lambda alert=a: self._show_alert_detail(alert)
+                    ).pack(side="left", pady=10)
+                else:
+                    tk.Label(
+                        row,
+                        text=value,
+                        bg=BG_CARD,
+                        fg=TEXT_SEC,
+                        font=(FONT, self.S(11)),
+                        width=w,
+                        pady=self.S(10)
+                    ).pack(side="left")
+
+        if hasattr(self, "page_btn"):
+            self.page_btn.config(text=str(self.alert_page + 1))
+
+    def _show_alert_detail(self, alert):
+        popup = tk.Toplevel(self)
+        popup.title("상세 보기")
+        popup.geometry("600x420")
+        popup.configure(bg=BG_CARD)
+
+        tk.Label(
+            popup,
+            text="자세 상세 기록",
+            bg=BG_CARD,
+            fg=TEXT_PRI,
+            font=(FONT, 16, "bold")
+        ).pack(anchor="w", padx=20, pady=(20, 10))
+
+        img_path = alert.get("img_path")
+
+        try:
+            from PIL import Image, ImageTk
+            import os
+
+            if img_path and os.path.exists(img_path):
+                pil = Image.open(img_path)
+                pil.thumbnail((420, 260))
+                photo = ImageTk.PhotoImage(pil)
+
+                img_lbl = tk.Label(popup, image=photo, bg=BG_CARD)
+                img_lbl.image = photo
+                img_lbl.pack(pady=10)
+            else:
+                tk.Label(
+                    popup,
+                    text="저장된 사진이 없습니다.",
+                    bg=BG_CARD,
+                    fg=TEXT_HINT,
+                    font=(FONT, 11)
+                ).pack(pady=40)
+
+        except Exception:
+            tk.Label(
+                popup,
+                text="사진을 불러올 수 없습니다.",
+                bg=BG_CARD,
+                fg=TEXT_HINT,
+                font=(FONT, 11)
+            ).pack(pady=40)
+
+        tk.Label(
+            popup,
+            text=alert.get("message", "자세 분석 정보가 없습니다."),
+            bg=BG_CARD,
+            fg=TEXT_SEC,
+            font=(FONT, 10),
+            wraplength=520
+        ).pack(padx=20, pady=10)
+
+        tk.Button(
+            popup,
+            text="닫기",
+            bg=ACCENT,
+            fg="#FFFFFF",
+            bd=0,
+            padx=20,
+            pady=8,
+            command=popup.destroy
+        ).pack(pady=10)
 
     def refresh(self):
         self.cal.refresh()
+
+        if hasattr(self, "alert_rows"):
+            self._render_alert_rows()
+        
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -87,96 +387,65 @@ class DayDetailPanel(tk.Frame):
                      fg=TEXT_HINT, font=(FONT, 11), justify="center").pack(expand=True)
             return
 
-        avg   = summary["avg_score"]
-        col   = score_color(avg)
-        grade, label = score_grade(avg)
+        avg = summary["avg_score"]
+        col = score_color(avg)
 
-        # ring + score
-        ring_row = tk.Frame(self, bg=BG_CARD)
-        ring_row.pack(fill="x", padx=14, pady=(0, 8))
+        total_sec = summary["total_duration"]
+        good_sec = summary["good_posture_sec"]
+        alert_count = summary["alert_count"]
 
-        ring = ScoreRingCanvas(ring_row, size=110, ring_width=12, bg=BG_CARD)
-        ring.pack(side="left")
-        ring.draw(avg)
+        ratio = int((good_sec / total_sec) * 100) if total_sec > 0 else 0
 
-        info = tk.Frame(ring_row, bg=BG_CARD)
-        info.pack(side="left", padx=(10, 0))
-        tk.Label(info, text=score_label_ko(avg), bg=BG_CARD, fg=col,
-                 font=(FONT, 12, "bold")).pack(anchor="w", pady=(14, 2))
-        tk.Label(info, text=f"등급  {grade}  —  {label}", bg=BG_CARD,
-                 fg=TEXT_SEC, font=(FONT, 9)).pack(anchor="w")
-
-        # stats grid
         stats = [
-            ("RULA 점수",      f"{avg:.1f}점",                                 col),
-            ("바른 자세 시간", fmt_duration_ko(summary["good_posture_sec"]),   CLR_GOOD),
-            ("경고 횟수",      f"{summary['alert_count']}회",
-             CLR_DANGER if summary["alert_count"] > 0 else TEXT_SEC),
+            ("평균 자세 점수", f"{avg:.1f}", "/ 20점", col),
+            ("바른 자세 비율", f"{ratio}", "%", CLR_GOOD if ratio >= 60 else CLR_WARN),
+            ("경고 횟수", f"{alert_count}", "회",
+             CLR_DANGER if alert_count > 0 else TEXT_SEC),
+            ("총 착석 시간", fmt_duration_ko(total_sec), "", TEXT_PRI),
         ]
-        for stat_label, stat_val, stat_col in stats:
-            row = tk.Frame(self, bg=BG_APP,
-                           highlightbackground=CLR_BORDER, highlightthickness=1)
-            row.pack(fill="x", padx=14, pady=2)
-            tk.Label(row, text=stat_label, bg=BG_APP, fg=TEXT_SEC,
-                     font=(FONT, 9), width=14, anchor="w").pack(
-                side="left", padx=10, pady=8)
-            tk.Label(row, text=stat_val, bg=BG_APP, fg=stat_col,
-                     font=(FONT, 10, "bold")).pack(side="right", padx=10)
 
-        # total sitting time
-        dur_row = tk.Frame(self, bg=BG_APP,
-                           highlightbackground=CLR_BORDER, highlightthickness=1)
-        dur_row.pack(fill="x", padx=14, pady=2)
-        tk.Label(dur_row, text="총 착석 시간", bg=BG_APP, fg=TEXT_SEC,
-                 font=(FONT, 9), width=14, anchor="w").pack(
-            side="left", padx=10, pady=8)
-        dur_str = fmt_duration_ko(summary["total_duration"])
-        tk.Label(dur_row, text=dur_str, bg=BG_APP, fg=TEXT_PRI,
-                 font=(FONT, 10, "bold")).pack(side="right", padx=10)
+        grid = tk.Frame(self, bg=BG_CARD)
+        grid.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # alerts
-        if alerts:
-            tk.Label(self, text="알림 기록", bg=BG_CARD, fg=TEXT_SEC,
-                     font=(FONT, 9, "bold")).pack(anchor="w", padx=14, pady=(12, 4))
-            dot_colors = {"danger": CLR_DANGER, "warn": CLR_WARN, "info": CLR_GOOD}
+        for i, (title, value, unit, color) in enumerate(stats):
+            r = i // 2
+            c = i % 2
 
-            # 고정 높이 스크롤 영역 (5행 크기 유지)
-            scroll_outer = tk.Frame(self, bg=BG_CARD)
-            scroll_outer.pack(fill="x", padx=14, pady=(0, 10))
+            card = tk.Frame(
+                grid,
+                bg=BG_APP,
+                highlightbackground=CLR_BORDER,
+                highlightthickness=1
+            )
+            card.grid(row=r, column=c, padx=4, pady=4, sticky="nsew")
 
-            alert_canvas = tk.Canvas(scroll_outer, bg=BG_CARD,
-                                     highlightthickness=0, height=185)
-            vbar = tk.Scrollbar(scroll_outer, orient="vertical",
-                                command=alert_canvas.yview)
-            alert_canvas.configure(yscrollcommand=vbar.set)
-            vbar.pack(side="right", fill="y")
-            alert_canvas.pack(side="left", fill="x", expand=True)
+            grid.columnconfigure(c, weight=1)
+            grid.rowconfigure(r, weight=1)
 
-            inner = tk.Frame(alert_canvas, bg=BG_CARD)
-            win = alert_canvas.create_window((0, 0), window=inner, anchor="nw")
+            tk.Label(
+                card,
+                text=title,
+                bg=BG_APP,
+                fg=TEXT_PRI,
+                font=(FONT, 8, "bold")
+            ).pack(anchor="nw", padx=10, pady=(10, 4))
 
-            alert_canvas.bind("<Configure>",
-                              lambda e: alert_canvas.itemconfig(win, width=e.width))
-            inner.bind("<Configure>",
-                       lambda e: alert_canvas.configure(
-                           scrollregion=alert_canvas.bbox("all")))
-            alert_canvas.bind("<Enter>",
-                              lambda e: alert_canvas.bind_all(
-                                  "<MouseWheel>",
-                                  lambda ev: alert_canvas.yview_scroll(
-                                      int(-1 * (ev.delta / 120)), "units")))
-            alert_canvas.bind("<Leave>",
-                              lambda e: alert_canvas.unbind_all("<MouseWheel>"))
+            value_row = tk.Frame(card, bg=BG_APP)
+            value_row.pack(expand=True, pady=(0, 10))
 
-            for alert in alerts:
-                arow = tk.Frame(inner, bg=BG_APP,
-                                highlightbackground=CLR_BORDER, highlightthickness=1)
-                arow.pack(fill="x", pady=2)
-                sev = alert.get("severity", "info")
-                tk.Label(arow, text="●", bg=BG_APP, fg=dot_colors.get(sev, TEXT_HINT),
-                         font=(FONT, 9)).pack(side="left", padx=(8, 4), pady=6)
-                tk.Label(arow, text=alert["message"], bg=BG_APP, fg=TEXT_PRI,
-                         font=(FONT, 8), wraplength=180, justify="left").pack(
-                    side="left", fill="x", expand=True, pady=6)
-                tk.Label(arow, text=alert["time"], bg=BG_APP, fg=TEXT_HINT,
-                         font=(FONT, 8)).pack(side="right", padx=8)
+            tk.Label(
+                value_row,
+                text=value,
+                bg=BG_APP,
+                fg=color,
+                font=(FONT, 18, "bold")
+            ).pack(side="left")
+
+            if unit:
+                tk.Label(
+                    value_row,
+                    text=unit,
+                    bg=BG_APP,
+                    fg=TEXT_SEC,
+                    font=(FONT, 9)
+                ).pack(side="left", padx=(4, 0))

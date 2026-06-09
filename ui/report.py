@@ -1,6 +1,7 @@
 """ReportPage — 기간별 자세 분석 리포트."""
 import tkinter as tk
 from datetime import date, timedelta
+import math
 
 from config import (
     FONT, BG_APP, BG_CARD, BG_ACTIVE, ACCENT,
@@ -22,6 +23,7 @@ class ReportPage(tk.Frame):
         self._tab_btns     = {}
         self._data_cache   = {}
         self._series_cache = []
+        self._top_problem_cards = []
 
         self._build_scroll_container()
         self._build(self._inner)
@@ -57,7 +59,7 @@ class ReportPage(tk.Frame):
         # 헤더
         hdr = tk.Frame(root, bg=BG_APP)
         hdr.pack(fill="x", padx=20, pady=(18, 8))
-        tk.Label(hdr, text="리포트", bg=BG_APP, fg=TEXT_PRI,
+        tk.Label(hdr, text="자세 분석", bg=BG_APP, fg=TEXT_PRI,
                  font=(FONT, 18, "bold")).pack(anchor="w")
         tk.Label(hdr, text="기간별 자세 데이터를 분석합니다.",
                  bg=BG_APP, fg=TEXT_SEC, font=(FONT, 10)).pack(anchor="w")
@@ -80,8 +82,7 @@ class ReportPage(tk.Frame):
         # 요약 카드 4개
         cards_frame = tk.Frame(root, bg=BG_APP)
         cards_frame.pack(fill="x", padx=20, pady=(0, 12))
-        self._card_avg   = self._summary_card(cards_frame, "평균 점수",      "--", last=False)
-        self._card_time  = self._summary_card(cards_frame, "모니터링 시간",   "--", last=False)
+        self._card_avg   = self._summary_card(cards_frame, "평균 자세 점수",      "--", last=False)
         self._card_ratio = self._summary_card(cards_frame, "바른 자세 비율", "--", last=False)
         self._card_alert = self._summary_card(cards_frame, "경고 횟수",      "--", last=True)
 
@@ -92,37 +93,101 @@ class ReportPage(tk.Frame):
         self._bar_canvas.pack(fill="x", padx=16, pady=(0, 12))
         self._bar_canvas.bind("<Configure>", lambda e: self._draw_bar_chart())
 
+        # 자세 문제 TOP3
+        top_wrap = self._section_card(root, "자세 상태")
+
+        top_row = tk.Frame(top_wrap, bg=BG_CARD)
+        top_row.pack(fill="x", padx=12, pady=(0, 12))
+
+        self._top_problem_cards = []
+
+        for _ in range(4):
+            card = tk.Frame(
+                top_row,
+                bg=BG_CARD,
+                highlightbackground=CLR_BORDER,
+                highlightthickness=1
+            )
+            card.pack(side="left", fill="both", expand=True, padx=4)
+
+            title_lbl = tk.Label(
+                card,
+                text="--",
+                bg=BG_CARD,
+                fg=TEXT_PRI,
+                font=(FONT, 10, "bold")
+            )
+            title_lbl.pack(pady=(12, 2))
+
+            status_lbl = tk.Label(
+                card,
+                text="--",
+                bg=BG_CARD,
+                fg=TEXT_HINT,
+                font=(FONT, 12, "bold")
+            )
+            status_lbl.pack(pady=(0, 8))
+
+            scale = tk.Frame(card, bg=BG_CARD, height=22)
+            scale.pack(fill="x", padx=14, pady=(0, 0))
+            scale.pack_propagate(False)
+
+            tk.Label(scale, text="주의", bg=BG_CARD, fg=CLR_WARN,
+                     font=(FONT, 7)).place(relx=0.40, rely=0)
+            tk.Label(scale, text="위험", bg=BG_CARD, fg=CLR_DANGER,
+                     font=(FONT, 7)).place(relx=0.70, rely=0)
+
+            bar_bg = tk.Frame(card, bg="#E5E7EB", height=8)
+            bar_bg.pack(fill="x", padx=14, pady=(0, 10))
+
+            tk.Frame(bar_bg, bg=CLR_WARN, width=1).place(relx=0.40, relheight=1)
+            tk.Frame(bar_bg, bg=CLR_DANGER, width=1).place(relx=0.70, relheight=1)
+
+            bar = tk.Frame(bar_bg, bg=TEXT_HINT, height=8)
+            bar.place(relwidth=0, relheight=1)
+
+            percent_lbl = tk.Label(
+                card,
+                text="--",
+                bg=BG_CARD,
+                fg=TEXT_HINT,
+                font=(FONT, 9, "bold")
+            )
+            percent_lbl.pack(pady=(0, 12))
+
+            self._top_problem_cards.append((title_lbl, status_lbl, bar, percent_lbl))
+
         # 시간대별 + 등급 분포 (나란히)
-        mid = tk.Frame(root, bg=BG_APP)
-        mid.pack(fill="x", padx=20, pady=(0, 12))
+        # mid = tk.Frame(root, bg=BG_APP)
+        # mid.pack(fill="x", padx=20, pady=(0, 12))
 
-        hourly_wrap = tk.Frame(mid, bg=BG_CARD,
-                                highlightbackground=CLR_BORDER, highlightthickness=1)
-        hourly_wrap.pack(side="left", fill="both", expand=True)
-        tk.Label(hourly_wrap, text="시간대별 패턴", bg=BG_CARD, fg=TEXT_SEC,
-                 font=(FONT, 9)).pack(anchor="nw", padx=12, pady=(10, 4))
-        self._hourly_canvas = tk.Canvas(hourly_wrap, bg=BG_CARD, height=130,
-                                         highlightthickness=0)
-        self._hourly_canvas.pack(fill="x", padx=12, pady=(0, 12))
-        self._hourly_canvas.bind("<Configure>", lambda e: self._draw_hourly())
+        # hourly_wrap = tk.Frame(mid, bg=BG_CARD,
+        #                         highlightbackground=CLR_BORDER, highlightthickness=1)
+        # hourly_wrap.pack(side="left", fill="both", expand=True)
+        # tk.Label(hourly_wrap, text="시간대별 패턴", bg=BG_CARD, fg=TEXT_SEC,
+        #          font=(FONT, 9)).pack(anchor="nw", padx=12, pady=(10, 4))
+        # self._hourly_canvas = tk.Canvas(hourly_wrap, bg=BG_CARD, height=130,
+        #                                  highlightthickness=0)
+        # self._hourly_canvas.pack(fill="x", padx=12, pady=(0, 12))
+        # self._hourly_canvas.bind("<Configure>", lambda e: self._draw_hourly())
 
-        grade_wrap = tk.Frame(mid, bg=BG_CARD,
-                               highlightbackground=CLR_BORDER, highlightthickness=1)
-        grade_wrap.pack(side="left", fill="both", expand=True, padx=(8, 0))
-        tk.Label(grade_wrap, text="등급 분포", bg=BG_CARD, fg=TEXT_SEC,
-                 font=(FONT, 9)).pack(anchor="nw", padx=12, pady=(10, 4))
-        self._grade_canvas = tk.Canvas(grade_wrap, bg=BG_CARD, height=130,
-                                        highlightthickness=0)
-        self._grade_canvas.pack(fill="x", padx=12, pady=(0, 12))
-        self._grade_canvas.bind("<Configure>", lambda e: self._draw_grade_dist())
+        # grade_wrap = tk.Frame(mid, bg=BG_CARD,
+        #                        highlightbackground=CLR_BORDER, highlightthickness=1)
+        # grade_wrap.pack(side="left", fill="both", expand=True, padx=(8, 0))
+        # tk.Label(grade_wrap, text="등급 분포", bg=BG_CARD, fg=TEXT_SEC,
+        #          font=(FONT, 9)).pack(anchor="nw", padx=12, pady=(10, 4))
+        # self._grade_canvas = tk.Canvas(grade_wrap, bg=BG_CARD, height=130,
+        #                                 highlightthickness=0)
+        # self._grade_canvas.pack(fill="x", padx=12, pady=(0, 12))
+        # self._grade_canvas.bind("<Configure>", lambda e: self._draw_grade_dist())
 
         # 인사이트
-        insight_wrap = self._section_card(root, "인사이트")
-        self._insight_lbl = tk.Label(insight_wrap, text="",
-                                      bg=BG_CARD, fg=TEXT_SEC,
-                                      font=(FONT, 10), wraplength=900,
-                                      justify="left", anchor="w")
-        self._insight_lbl.pack(fill="x", padx=16, pady=(0, 16))
+        # insight_wrap = self._section_card(root, "인사이트")
+        # self._insight_lbl = tk.Label(insight_wrap, text="",
+        #                               bg=BG_CARD, fg=TEXT_SEC,
+        #                               font=(FONT, 10), wraplength=900,
+        #                               justify="left", anchor="w")
+        # self._insight_lbl.pack(fill="x", padx=16, pady=(0, 16))
 
         tk.Frame(root, bg=BG_APP, height=24).pack()
 
@@ -175,7 +240,65 @@ class ReportPage(tk.Frame):
                 days.append(d)
                 d += timedelta(days=1)
             return days
+    
+    def _problem_color(self, percent):
+        if percent >= 70:
+            return CLR_DANGER
+        elif percent >= 40:
+            return CLR_WARN
+        else:
+            return CLR_GOOD
+        
+    def _problem_status(self, percent):
+        if percent >= 70:
+            return "위험", CLR_DANGER
+        elif percent >= 40:
+            return "주의", CLR_WARN
+        else:
+            return "낮음", CLR_GOOD
 
+    def _get_top3_problems(self, dates):
+        axis_info = [
+            ("목 기울어짐", "neck_flexion", 30.0),
+            ("거북목", "forward_dist", 15.0),
+            ("몸 기울어짐", "lateral_tilt", 20.0),
+            ("어깨 비대칭", "shoulder_tilt", 12.0),
+        ]
+
+        result = []
+
+        for label, key, max_value in axis_info:
+            values = []
+
+            for d in dates:
+                alerts = self.data_manager.get_day_alerts(d.isoformat())
+                for alert in alerts:
+                    value = alert.get(key)
+                    if value is None:
+                        continue
+                    try:
+                        v = abs(float(value))
+                        if not math.isnan(v):
+                            values.append(v)
+                    except (TypeError, ValueError):
+                        pass
+            if values:
+                avg_value = sum(values) / len(values)
+                percent = min(100, int((avg_value / max_value) * 100))
+            else:
+                avg_value = 0
+                percent = 0
+
+            result.append({
+                "label": label,
+                "value": round(avg_value, 1),
+                "percent": percent,
+                "max": max_value
+            })
+
+        result.sort(key=lambda x: x["percent"], reverse=True)
+        return result
+    
     def _aggregate(self):
         dates  = self._get_date_range()
         all_scores, total_dur, total_alerts = [], 0, 0
@@ -210,6 +333,7 @@ class ReportPage(tk.Frame):
             "alerts":       total_alerts,
             "grade_counts": grade_counts,
             "hourly":       hourly_avg,
+            "top3_problems": self._get_top3_problems(dates),
         }
 
     def _get_daily_series(self):
@@ -244,10 +368,10 @@ class ReportPage(tk.Frame):
             text=f"PSI {avg:.1f}" if avg is not None else "--",
             fg=score_color(avg) if avg is not None else TEXT_HINT,
         )
-        self._card_time.config(
-            text=fmt_duration_ko(data["duration"]) if data["duration"] else "--",
-            fg=TEXT_PRI,
-        )
+        # self._card_time.config(
+        #     text=fmt_duration_ko(data["duration"]) if data["duration"] else "--",
+        #     fg=TEXT_PRI,
+        # )
         ratio = data["ratio"]
         self._card_ratio.config(
             text=f"{ratio:.0f}%" if ratio is not None else "--",
@@ -258,13 +382,37 @@ class ReportPage(tk.Frame):
             fg=CLR_DANGER if data["alerts"] > 5 else TEXT_PRI,
         )
 
+        top3 = data.get("top3_problems", [])
+
+        for i, (title_lbl, status_lbl, bar, percent_lbl) in enumerate(self._top_problem_cards):
+            if i < len(top3):
+                item = top3[i]
+                percent = item["percent"]
+                label = item["label"]
+                value = item["value"]
+                status, col = self._problem_status(percent)
+
+                title_lbl.config(text=label)
+                status_lbl.config(text=status, fg=col)
+                percent_lbl.config(text=f"{value}", fg=col)
+
+                bar.config(bg=col)
+                bar.place(relwidth=percent / 100, relheight=1)
+            else:
+                title_lbl.config(text="--")
+                status_lbl.config(text="--", fg=TEXT_HINT)
+                percent_lbl.config(text="--", fg=TEXT_HINT)
+
+                bar.config(bg=TEXT_HINT)
+                bar.place(relwidth=0, relheight=1)
+
         # 인사이트
-        self._insight_lbl.config(text=self._generate_insight(data))
+        # self._insight_lbl.config(text=self._generate_insight(data))
 
         # 차트 다시 그리기
         self._draw_bar_chart()
-        self._draw_hourly()
-        self._draw_grade_dist()
+        # self._draw_hourly()
+        # self._draw_grade_dist()
 
     # ── 점수 추이 막대 차트 ───────────────────────────────────────────────────
     def _draw_bar_chart(self):

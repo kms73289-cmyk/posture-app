@@ -44,8 +44,6 @@ class SettingsPage(tk.Frame):
         hdr.pack(fill="x", padx=20, pady=(18, 8))
         tk.Label(hdr, text="환경 설정", bg=BG_APP, fg=TEXT_PRI,
                  font=(FONT, 18, "bold")).pack(anchor="w")
-        tk.Label(hdr, text="앱 동작을 설정합니다.",
-                 bg=BG_APP, fg=TEXT_SEC, font=(FONT, 10)).pack(anchor="w")
         tk.Frame(root, bg=CLR_BORDER, height=1).pack(fill="x", padx=20, pady=(4, 16))
 
         # ── 알림 간격 (호버 드롭다운) ─────────────────────────────────────────

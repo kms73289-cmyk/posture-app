@@ -87,13 +87,14 @@ class MetricCard(tk.Frame):
 # CalendarWidget  — embeddable monthly calendar
 # ══════════════════════════════════════════════════════════════════════════════
 class CalendarWidget(tk.Frame):
-    CELL_W = 90
-    CELL_H = 68
+    CELL_W = 150
+    CELL_H = 80
 
     def __init__(self, parent, data_manager, on_date_click=None, **kwargs):
         super().__init__(parent, bg=BG_APP, **kwargs)
         self.data_manager  = data_manager
         self.on_date_click = on_date_click
+        self.selected_date = None
         now = datetime.now()
         self.cur_year  = now.year
         self.cur_month = now.month
@@ -137,7 +138,7 @@ class CalendarWidget(tk.Frame):
         for col, name in enumerate(days_ko):
             c = CLR_DANGER if col >= 5 else TEXT_SEC
             tk.Label(self.grid_f, text=name, bg=BG_APP, fg=c,
-                     font=(FONT, 9, "bold"), width=11).grid(
+                     font=(FONT, 9, "bold"), width=12).grid(
                 row=0, column=col, pady=(0, 4))
 
         month_data = self.data_manager.get_month_data(self.cur_year, self.cur_month)
@@ -151,21 +152,29 @@ class CalendarWidget(tk.Frame):
                         row=row, column=col, padx=2, pady=2)
                     continue
 
-                is_today   = (day == today.day and
-                              self.cur_month == today.month and
-                              self.cur_year  == today.year)
-                border_col = ACCENT if is_today else CLR_BORDER
-                day_col    = ACCENT if is_today else (CLR_DANGER if col >= 5 else TEXT_PRI)
-                cell_bg    = BG_ACTIVE if is_today else BG_CARD
+                is_today = (
+                    day == today.day and
+                    self.cur_month == today.month and
+                    self.cur_year == today.year
+                )
+
+                d_str = date(self.cur_year, self.cur_month, day).isoformat()
+                is_selected = self.selected_date == d_str
+
+                border_col = ACCENT if is_selected else CLR_BORDER
+                day_col = ACCENT if is_selected else (CLR_DANGER if col >= 5 else TEXT_PRI)
+                cell_bg = BG_ACTIVE if is_selected else BG_CARD
 
                 cell = tk.Frame(self.grid_f, bg=cell_bg,
                                 width=self.CELL_W, height=self.CELL_H,
                                 highlightbackground=border_col, highlightthickness=1)
                 cell.grid(row=row, column=col, padx=2, pady=2)
                 cell.pack_propagate(False)
+                
+                self._bind_click(cell, d_str)
 
                 tk.Label(cell, text=str(day), bg=cell_bg, fg=day_col,
-                         font=(FONT, 10, "bold")).pack(anchor="nw", padx=5, pady=3)
+                         font=(FONT, 11, "bold")).pack(anchor="nw", padx=5, pady=3)
 
                 if day in month_data:
                     s   = month_data[day]
@@ -176,9 +185,8 @@ class CalendarWidget(tk.Frame):
                     tk.Label(cell, text=f"{avg:.1f}점", bg=cell_bg, fg=sc,
                              font=(FONT, 10, "bold")).pack(anchor="center")
                     tk.Label(cell, text=t_str, bg=cell_bg, fg=TEXT_HINT,
-                             font=(FONT, 7)).pack(anchor="center")
-                    d_str = date(self.cur_year, self.cur_month, day).isoformat()
-                    self._bind_click(cell, d_str)
+                             font=(FONT, 6)).pack(anchor="center")
+                    
 
     def _bind_click(self, cell, date_str):
         def handler(e=None):
@@ -203,6 +211,10 @@ class CalendarWidget(tk.Frame):
         else:
             self.cur_month += 1
         self._render()
-
+    
+    def set_selected_date(self, date_str):
+        self.selected_date = date_str
+        self._render()
+    
     def refresh(self):
         self._render()
