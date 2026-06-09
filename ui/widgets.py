@@ -89,7 +89,14 @@ class MetricCard(tk.Frame):
 class CalendarWidget(tk.Frame):
     CELL_W = 150
     CELL_H = 80
+    def _cell_size(self):
+        w = max(300, self.grid_f.winfo_width())
+        h = max(250, self.grid_f.winfo_height())
 
+        cell_w = max(60, int((w - 30) / 7))
+        cell_h = max(44, int((h - 35) / 6.5))
+
+        return cell_w, cell_h
     def __init__(self, parent, data_manager, on_date_click=None, **kwargs):
         super().__init__(parent, bg=BG_APP, **kwargs)
         self.data_manager  = data_manager
@@ -99,6 +106,8 @@ class CalendarWidget(tk.Frame):
         self.cur_year  = now.year
         self.cur_month = now.month
         self._build_chrome()
+        self._resize_job = None
+        self.bind("<Configure>", self._on_resize)
         self._render()
 
     def _build_chrome(self):
@@ -128,11 +137,16 @@ class CalendarWidget(tk.Frame):
 
         self.grid_f = tk.Frame(self, bg=BG_APP, padx=2, pady=2)
         self.grid_f.pack(fill="both", expand=True)
-
+    def _on_resize(self, event=None):
+        if self._resize_job:
+            self.after_cancel(self._resize_job)
+        self._resize_job = self.after(80, self._render)
     def _render(self):
         for w in self.grid_f.winfo_children():
             w.destroy()
         self.month_lbl.config(text=f"{self.cur_year}년  {self.cur_month:02d}월")
+
+        cell_w, cell_h = self._cell_size()
 
         days_ko = ["월", "화", "수", "목", "금", "토", "일"]
         for col, name in enumerate(days_ko):
@@ -148,7 +162,7 @@ class CalendarWidget(tk.Frame):
             for col, day in enumerate(week):
                 if day == 0:
                     tk.Frame(self.grid_f, bg=BG_APP,
-                             width=self.CELL_W, height=self.CELL_H).grid(
+                             width=cell_w, height=cell_h).grid(
                         row=row, column=col, padx=2, pady=2)
                     continue
 
@@ -166,7 +180,7 @@ class CalendarWidget(tk.Frame):
                 cell_bg = BG_ACTIVE if is_selected else BG_CARD
 
                 cell = tk.Frame(self.grid_f, bg=cell_bg,
-                                width=self.CELL_W, height=self.CELL_H,
+                                width=cell_w, height=cell_h,
                                 highlightbackground=border_col, highlightthickness=1)
                 cell.grid(row=row, column=col, padx=2, pady=2)
                 cell.pack_propagate(False)

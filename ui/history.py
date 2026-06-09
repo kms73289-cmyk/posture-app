@@ -55,9 +55,7 @@ class HistoryPage(tk.Frame):
 
         # 상단 카드 영역
         top = tk.Frame(container, bg=BG_APP)
-        top.pack(fill="x")
-        top.configure(height=self.S(560))
-        top.pack_propagate(False)
+        top.pack(fill="both", expand=True)
 
         # 왼쪽 달력 카드
         cal_card = tk.Frame(
@@ -99,7 +97,7 @@ class HistoryPage(tk.Frame):
             font=(FONT, 16, "bold")
         ).pack(anchor="w", pady=(18, 6))
         alerts_wrap = tk.Frame(container, bg=BG_APP)
-        alerts_wrap.pack(fill="both",  pady=(0, 0))
+        alerts_wrap.pack(fill="x", pady=(0, 0))
 
         # self._alerts_page = AlertsPage(alerts_wrap, self.data_manager)
         # self._alerts_page.pack(fill="both", expand=True)
@@ -117,16 +115,19 @@ class HistoryPage(tk.Frame):
         cols = ["No", "시간", "자세 점수", "상태", "주요 문제", ""]
         widths = [8, 20, 20, 18, 55, 25]
 
-        for col, w in zip(cols, widths):
+        col_weights = [1, 2, 2, 2, 5, 2]
+
+        for i, col in enumerate(cols):
+            header.columnconfigure(i, weight=col_weights[i])
+
             tk.Label(
                 header,
                 text=col,
                 bg=BG_CARD,
                 fg=TEXT_PRI,
                 font=(FONT, 11, "bold"),
-                width=w,
                 pady=8
-            ).pack(side="left")
+            ).grid(row=0, column=i, sticky="nsew")
 
         self.alert_rows = tk.Frame(self.alert_table, bg=BG_CARD)
         self.alert_rows.pack(fill="x")
@@ -254,31 +255,31 @@ class HistoryPage(tk.Frame):
             else:
                 values = ["", "", "", "", "", ""]
 
-            widths = [8, 20, 20, 18, 55, 25]
+            col_weights = [1, 2, 2, 2, 5, 2]
 
-            for idx, (value, w) in enumerate(zip(values, widths)):
+            for idx, value in enumerate(values):
+                row.columnconfigure(idx, weight=col_weights[idx])
+
                 if idx == len(values) - 1 and value:
                     tk.Button(
                         row,
                         text=value,
                         bg=BG_CARD,
                         fg=ACCENT,
-                        font=(FONT, 11, "bold"),
+                        font=(FONT, self.S(10), "bold"),
                         bd=0,
-                        width=w,
                         cursor="hand2",
                         command=lambda alert=a: self._show_alert_detail(alert)
-                    ).pack(side="left", pady=10)
+                    ).grid(row=0, column=idx, sticky="nsew", pady=self.S(8))
                 else:
                     tk.Label(
                         row,
                         text=value,
                         bg=BG_CARD,
                         fg=TEXT_SEC,
-                        font=(FONT, self.S(11)),
-                        width=w,
-                        pady=self.S(10)
-                    ).pack(side="left")
+                        font=(FONT, self.S(10)),
+                        pady=self.S(8)
+                    ).grid(row=0, column=idx, sticky="nsew")
 
         if hasattr(self, "page_btn"):
             self.page_btn.config(text=str(self.alert_page + 1))
