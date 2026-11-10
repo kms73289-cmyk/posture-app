@@ -5,10 +5,11 @@ import os
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Body, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, StreamingResponse
 
 from config import DATA_FILE
+from backend import app_log
 from backend.models import (
     AlertOut, DaySummaryOut, HourlyPoint, InfoOut, MonthDayOut,
     ReportOut, SeriesPoint, SettingsIn, SettingsOut, TodayOut, GradeExpo,
@@ -23,9 +24,29 @@ ALERT_INTERVALS = {10, 60, 600, 1800, 3600}
 def build_router(monitor, data_manager, app_settings) -> APIRouter:
     router = APIRouter()
 
+    @router.post("/api/log")
+    def client_log(payload: dict = Body(default_factory=dict)):
+        app_log.info("ui", "client_event", **{str(k): v for k, v in (payload or {}).items()})
+        return {"ok": True}
+
     @router.post("/api/measure/start")
     def measure_start():
-        return monitor.start()
+        app_log.info("api", "POST /api/measure/start")
+        try:
+            result = monitor.start()
+        except Exception as e:
+            app_log.exception("api", "measure_start_unhandled", e)
+            raise HTTPException(500, f"측정 시작 실패: {e}") from e
+        app_log.info(
+            "api",
+            "measure_start_result",
+            ok=result.get("ok"),
+            already=result.get("already"),
+            error=result.get("error"),
+        )
+        if not result.get("ok"):
+            raise HTTPException(500, result.get("error") or "측정 시작 실패")
+        return result
 
     @router.post("/api/measure/stop")
     def measure_stop():

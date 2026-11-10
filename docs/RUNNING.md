@@ -17,6 +17,16 @@ cd frontend
 npm install
 ```
 
+## 데스크톱 앱 (권장)
+
+프론트엔드를 빌드한 뒤 프로젝트 루트에서:
+
+```bash
+python barun_jase.py
+```
+
+창·트레이·카메라·데스크톱 알림이 함께 실행됩니다.
+
 ## 개발 실행 (두 프로세스)
 
 터미널 1 — API (포트 8000)
@@ -42,18 +52,16 @@ npm run dev
 cd frontend
 npm run build
 cd ..
-uvicorn backend.main:app --host 127.0.0.1 --port 8000
+python barun_jase.py
 ```
 
-`frontend/dist`가 있으면 FastAPI가 UI를 같이 서빙합니다. `http://127.0.0.1:8000`
+`frontend/dist`가 있으면 데스크톱 앱이 UI를 같이 서빙합니다. 브라우저만 쓸 때는 `uvicorn backend.main:app --host 127.0.0.1 --port 8000` 후 `http://127.0.0.1:8000`
 
 ## 데이터 위치
 
 - 기록: `~/.posture_app/posture_data_v2.json`
 - 알림 사진: `~/.posture_app/alert_images/`
 - 설정: `~/.posture_app/app_settings.json`
-
-기존 tkinter 앱(`python posture.py`)은 그대로 둘 수 있습니다. 동시에 카메라를 쓰면 한쪽이 실패할 수 있습니다.
 
 ## 추가한 패키지
 

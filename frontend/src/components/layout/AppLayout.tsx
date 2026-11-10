@@ -1,10 +1,11 @@
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { ToastHost } from "./ToastHost";
 
 export function AppLayout() {
   return (
-    <div className="flex h-screen min-w-[1100px] bg-[linear-gradient(135deg,var(--page-from),var(--page-to))]">
+    <div className="relative flex h-screen min-w-[1100px] bg-[linear-gradient(135deg,var(--page-from),var(--page-to))]">
       <Sidebar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Header />
@@ -12,6 +13,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <ToastHost />
     </div>
   );
 }

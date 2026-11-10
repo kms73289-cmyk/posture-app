@@ -104,7 +104,7 @@ MediaPipe Pose로 **목 굴곡 · 머리 앞돌출 · 측방 기울기 · 어깨
 
 ```bash
 pip install -r requirements.txt
-py -3.10 posture.py
+py -3.10 barun_jase.py
 ```
 
 **requirements.txt**

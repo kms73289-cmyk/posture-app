@@ -34,6 +34,15 @@ function timedReq<T>(url: string, init: RequestInit, ms: number): Promise<T> {
 }
 
 export const api = {
+  log: (payload: Record<string, unknown>) => {
+    fetch("/api/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => {
+      /* ignore */
+    });
+  },
   start: () => timedReq("/api/measure/start", { method: "POST" }, 60_000),
   stop: () => timedReq("/api/measure/stop", { method: "POST" }, 15_000),
   recalibrate: () => timedReq("/api/measure/recalibrate", { method: "POST" }, 15_000),

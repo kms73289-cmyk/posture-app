@@ -40,7 +40,7 @@ export const useMonitorStore = create<MonitorStore>((set) => ({
     set((s) => ({ toasts: [...s.toasts, { id, text, kind }] }));
     window.setTimeout(() => {
       set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
-    }, 4000);
+    }, 8000);
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
   lastAlertAt: 0,

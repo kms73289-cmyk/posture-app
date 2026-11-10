@@ -13,6 +13,7 @@ export function MeasurePage() {
   const pushToast = useMonitorStore((s) => s.pushToast);
   const qc = useQueryClient();
   const [busy, setBusy] = useState<"start" | "stop" | "recal" | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
   const [tipIdx, setTipIdx] = useState(0);
   const [streamKey, setStreamKey] = useState(0);
   const [camReady, setCamReady] = useState(false);
@@ -49,17 +50,22 @@ export function MeasurePage() {
 
   async function onStart() {
     setBusy("start");
+    setStartError(null);
+    api.log({ step: 1, event: "measure_start_click" });
     try {
-      await api.start();
+      api.log({ step: 2, event: "measure_start_request", url: "/api/measure/start" });
+      const result = await api.start();
+      api.log({ step: 3, event: "measure_start_ok", result });
     } catch (e) {
       const aborted = e instanceof DOMException && e.name === "AbortError";
-      pushToast(
-        aborted
-          ? "서버 응답이 없습니다. 백엔드 터미널을 확인한 뒤 다시 시도해 주세요."
-          : e instanceof Error
-            ? e.message
-            : "측정을 시작하지 못했습니다.",
-      );
+      const msg = aborted
+        ? "서버 응답이 없습니다. 앱을 종료한 뒤 다시 실행해 주세요."
+        : e instanceof Error
+          ? e.message
+          : "측정을 시작하지 못했습니다.";
+      api.log({ step: 3, event: "measure_start_fail", error: msg });
+      setStartError(msg);
+      pushToast(msg);
     } finally {
       setBusy(null);
     }
@@ -247,6 +253,9 @@ export function MeasurePage() {
             <p className="mt-1 text-[13px] text-ink-muted">
               기준 설정: 처음 5초간 바른 자세로 앉아주세요. 이후 자동으로 측정이 이어집니다.
             </p>
+            {startError && !st.running && (
+              <p className="mt-2 text-[13px] font-semibold text-danger">{startError}</p>
+            )}
           </div>
           <div className="flex shrink-0 gap-2">
             {!st.running ? (

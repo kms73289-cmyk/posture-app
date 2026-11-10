@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import sys
 import threading
 import time
 from typing import Optional
@@ -11,6 +12,7 @@ import numpy as np
 
 from config import SCORE_INTERVAL, score_grade
 from analyzer import PostureAnalyzer
+from backend import app_log
 from backend.desktop_overlay import overlay as desktop_overlay
 
 # ui/warning_banner.py
@@ -121,14 +123,19 @@ class MonitorService:
                 return
             self._model_loading = True
             try:
+                app_log.info("analyzer", "preload_begin")
                 self.analyzer = PostureAnalyzer()
+                app_log.info("analyzer", "preload_ok")
+            except Exception as e:
+                app_log.exception("analyzer", "preload_fail", e)
             finally:
                 self._model_loading = False
 
     def ensure_analyzer(self) -> PostureAnalyzer:
         if self.analyzer is None:
             self.preload_analyzer()
-        assert self.analyzer is not None
+        if self.analyzer is None:
+            raise RuntimeError("자세 분석 모델을 불러오지 못했습니다.")
         return self.analyzer
 
     def _bind_alert_callback(self):
@@ -144,9 +151,16 @@ class MonitorService:
 
     # ── 제어 ──────────────────────────────────────────────────────────────────
     def start(self) -> dict:
+        app_log.info("measure", "start_called", running=self._running)
         if self._running:
+            app_log.info("measure", "start_already_running")
             return {"ok": True, "already": True}
-        self.ensure_analyzer()
+        try:
+            self.ensure_analyzer()
+        except Exception as e:
+            app_log.exception("measure", "ensure_analyzer_fail", e)
+            return {"ok": False, "error": f"자세 분석 모델을 불러오지 못했습니다: {e}"}
+        app_log.info("measure", "analyzer_ready")
         self._bind_alert_callback()
         # 타이머는 첫 JPEG가 나온 뒤에 맞춤. 여기선 이전 세션 보정 상태만 리셋.
         self.analyzer.start_calibration()
@@ -159,7 +173,11 @@ class MonitorService:
         self._tick_thread = threading.Thread(target=self._tick_loop, daemon=True)
         self._cam_thread.start()
         self._tick_thread.start()
-        desktop_overlay.start()
+        try:
+            desktop_overlay.start()
+        except Exception as e:
+            app_log.exception("overlay", "start_fail", e)
+        app_log.info("measure", "start_ok")
         return {"ok": True, "already": False}
 
     def stop(self) -> dict:
@@ -209,17 +227,38 @@ class MonitorService:
             t.join(timeout=2.0)
 
     # ── 카메라 ────────────────────────────────────────────────────────────────
+    def _open_capture(self):
+        """설치본·pythonw 환경에서는 MSMF보다 DirectShow가 안정적이다."""
+        if sys.platform == "win32" and hasattr(cv2, "CAP_DSHOW"):
+            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            if cap is not None and cap.isOpened():
+                return cap
+            if cap is not None:
+                cap.release()
+        return cv2.VideoCapture(0)
+
     def _camera_loop(self):
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            self._camera_ok = False
-            while self._running and not self._stop_event.is_set():
-                time.sleep(0.2)
-            cap.release()
-            return
+        cap = None
         miss = 0
+        open_fail_logged = False
         try:
+            app_log.info("camera", "loop_begin")
             while self._running and not self._stop_event.is_set():
+                if cap is None or not cap.isOpened():
+                    self._camera_ok = False
+                    cap = self._open_capture()
+                    if cap is None or not cap.isOpened():
+                        if cap is not None:
+                            cap.release()
+                        cap = None
+                        if not open_fail_logged:
+                            app_log.error("camera", "open_fail", backend="CAP_DSHOW_then_default")
+                            open_fail_logged = True
+                        time.sleep(0.5)
+                        continue
+                    app_log.info("camera", "open_ok")
+                    open_fail_logged = False
+                    miss = 0
                 if self.analyzer is None:
                     time.sleep(0.1)
                     continue
@@ -232,6 +271,11 @@ class MonitorService:
                     miss += 1
                     if miss > 20:
                         self._camera_ok = False
+                        try:
+                            cap.release()
+                        except Exception:
+                            pass
+                        cap = None
                     time.sleep(0.05)
                     continue
                 miss = 0
@@ -242,7 +286,10 @@ class MonitorService:
                     self._arm_first_calib = False
                 try:
                     drawn, state = self.analyzer.process_frame(frame)
-                except Exception:
+                except Exception as e:
+                    if not getattr(self, "_mp_frame_fail_logged", False):
+                        app_log.exception("mediapipe", "process_frame_fail", e)
+                        self._mp_frame_fail_logged = True
                     time.sleep(0.05)
                     continue
                 ok, buf = cv2.imencode(".jpg", drawn, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
@@ -256,7 +303,8 @@ class MonitorService:
                     self._camera_ok = True
                 time.sleep(0.08)
         finally:
-            cap.release()
+            if cap is not None:
+                cap.release()
             self._camera_ok = False
 
     def _tick_loop(self):

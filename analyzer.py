@@ -19,41 +19,85 @@ _mp_path_lock  = _threading.Lock()
 _mp_path_fixed = False
 
 
+def _path_is_ascii(path: str) -> bool:
+    try:
+        path.encode("ascii")
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
+def _writable_ascii_root() -> str:
+    import os
+    candidates = [
+        os.path.join(os.environ.get("PUBLIC") or r"C:\Users\Public", "PostureApp"),
+        os.path.join(os.environ.get("ProgramData") or r"C:\ProgramData", "PostureApp"),
+        os.path.join(os.environ.get("TEMP") or r"C:\Windows\Temp", "PostureApp"),
+    ]
+    for root in candidates:
+        if not _path_is_ascii(root):
+            continue
+        try:
+            os.makedirs(root, exist_ok=True)
+            probe = os.path.join(root, ".write_test")
+            with open(probe, "w", encoding="utf-8") as f:
+                f.write("ok")
+            os.remove(probe)
+            return root
+        except OSError:
+            continue
+    raise RuntimeError("ASCII 경로에 MediaPipe 모델을 복사할 수 없습니다.")
+
+
 def _ensure_ascii_mediapipe_path():
     """mediapipe의 C++ 리소스 로더는 경로에 비ASCII(예: 한글) 문자가 있으면
     모델/그래프 파일(.tflite/.binarypb)을 열지 못해 FileNotFoundError를 낸다.
-    PyInstaller 동결 빌드가 한글 폴더명이나 한글 Windows 사용자명 경로에 설치되면
-    이 문제가 발생한다(파이썬 import는 유니코드 경로를 처리하므로 import 자체는 됨).
+    설치 폴더가 Local\\Programs\\바른자세 처럼 한글이면, 이식 Python의
+    site-packages\\mediapipe 경로도 비ASCII가 된다(파이썬 import는 되지만 C++ 로더는 실패).
 
-    해결: 동결 빌드의 경로(_MEIPASS)가 비ASCII이면 mediapipe/modules 데이터를 항상
-    ASCII인 위치(C:\\Users\\Public\\PostureApp)로 한 번 복사하고, solution_base.__file__을
-    그쪽으로 바꿔 mediapipe가 ASCII 경로에서 리소스를 찾게 한다. 경로가 이미 ASCII면
-    아무것도 하지 않는다."""
+    해결: 패키지 경로가 비ASCII이면 mediapipe/modules 를 ASCII 위치
+    (C:\\Users\\Public\\PostureApp 등)로 복사하고 solution_base.__file__을
+    그쪽으로 바꿔 C++ 로더가 ASCII 경로에서 리소스를 찾게 한다."""
     global _mp_path_fixed
     import sys, os
-    if not (getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")):
-        return
-    meipass = sys._MEIPASS
     try:
-        meipass.encode("ascii")
-        return  # 경로가 이미 ASCII → mediapipe 정상 동작, 복사 불필요
-    except UnicodeEncodeError:
-        pass
+        import mediapipe
+        import mediapipe.python.solution_base as _sb
+    except Exception:
+        return
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        check_path = sys._MEIPASS
+        src_modules = os.path.join(sys._MEIPASS, "mediapipe", "modules")
+    else:
+        check_path = os.path.abspath(mediapipe.__file__)
+        src_modules = os.path.join(os.path.dirname(check_path), "modules")
+    if _path_is_ascii(check_path):
+        return
     with _mp_path_lock:
         if _mp_path_fixed:
             return
         import shutil
-        public     = os.environ.get("PUBLIC") or r"C:\Users\Public"
-        ascii_root = os.path.join(public, "PostureApp")
-        src = os.path.join(meipass, "mediapipe", "modules")
+        ascii_root = _writable_ascii_root()
         dst = os.path.join(ascii_root, "mediapipe", "modules")
         marker = os.path.join(dst, "pose_landmark", "pose_landmark_cpu.binarypb")
         if not os.path.exists(marker):
+            if not os.path.isdir(src_modules):
+                raise FileNotFoundError(f"MediaPipe 모델 폴더가 없습니다: {src_modules}")
             os.makedirs(os.path.join(ascii_root, "mediapipe"), exist_ok=True)
-            shutil.copytree(src, dst, dirs_exist_ok=True)
-        import mediapipe.python.solution_base as _sb
+            shutil.copytree(src_modules, dst, dirs_exist_ok=True)
         _sb.__file__ = os.path.join(ascii_root, "mediapipe", "python", "solution_base.py")
         _mp_path_fixed = True
+        try:
+            from backend import app_log
+            app_log.info(
+                "analyzer",
+                "mediapipe_relocated",
+                src=src_modules,
+                dst=dst,
+                ascii_root=ascii_root,
+            )
+        except Exception:
+            pass
 
 
 class PostureAnalyzer:
