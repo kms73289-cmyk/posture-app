@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 64" fill="none">
+  <defs>
+    <linearGradient id="logoFullGrad" x1="12" y1="6" x2="52" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34D399"/>
+      <stop offset="1" stop-color="#0D9F6E"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <circle cx="32" cy="12" r="6.5" fill="url(#logoFullGrad)"/>
+    <path d="M32 21 C40 29 40 46 32 58 C24 46 24 29 32 21 Z" fill="url(#logoFullGrad)"/>
+    <path d="M28 27 C20 27 12 22 8 14 C17 13 25 17 28 27 Z" fill="url(#logoFullGrad)" opacity=".85"/>
+    <path d="M36 27 C44 27 52 22 56 14 C47 13 39 17 36 27 Z" fill="url(#logoFullGrad)" opacity=".85"/>
+    <path d="M32 26 V50" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>
+  </g>
+  <text x="72" y="42" font-family="'Malgun Gothic', Pretendard, sans-serif" font-size="30" font-weight="800" fill="#2C3342">바른자세</text>
+</svg>

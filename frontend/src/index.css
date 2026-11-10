@@ -1,0 +1,65 @@
+@import "pretendard/dist/web/static/pretendard.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #0da573;
+  --color-primary-hover: #0b8f64;
+  --color-good: #26b483;
+  --color-warn: #fdae35;
+  --color-danger: #fc8181;
+  --badge-good-bg: #e5f6f0;
+  --badge-good-fg: #0da573;
+  --badge-warn-bg: #fdf7e8;
+  --badge-warn-fg: #e8890c;
+  --badge-danger-bg: #feecec;
+  --nav-active-bg: #e9f7f1;
+  --color-text: #2c3342;
+  --color-text-sec: #718096;
+  --color-text-hint: #a0aec0;
+  --color-border: #e2e8f0;
+  --page-from: #e9f8f1;
+  --page-to: #e8edf8;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  color: var(--color-text);
+  font-family: Pretendard, "Malgun Gothic", sans-serif;
+  background: linear-gradient(135deg, var(--page-from), var(--page-to));
+}
+
+#root {
+  min-width: 0;
+}
+
+.card {
+  @apply bg-white rounded-card shadow-card;
+}
+
+.page-scroll {
+  @apply h-full overflow-y-auto;
+}
+
+.grade-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #edf2f7;
+  overflow: hidden;
+}
+
+.grade-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
