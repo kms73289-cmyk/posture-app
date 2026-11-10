@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2f8f0">
+  <meta name="description" content="웹캠으로 상체 자세를 측정하고 변화와 기록을 확인하는 바른자세 데스크톱 앱">
+  <title>바른자세 | 나에게 맞는 바른 자세 습관</title>
+  <style>
+    :root{--ink:#1e293b;--muted:#64748b;--green:#059669;--green-dark:#047857;--line:#e5ece7;--paper:#fff;--bg:#f2f8f0}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:var(--ink);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(135deg,#f2f8f0 0%,#f0f4f8 100%);line-height:1.6}
+    a{color:inherit;text-decoration:none}.wrap{width:min(1100px,calc(100% - 40px));margin:auto}
+    header{height:76px;display:flex;align-items:center;border-bottom:1px solid rgba(30,41,59,.07)}.nav{display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:19px;letter-spacing:-.5px}
+    .mark{width:36px;height:36px;border-radius:11px;background:var(--green);display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px #05966935}.mark svg{width:22px;height:22px}
+    .navlinks{display:flex;gap:28px;color:#526174;font-size:14px}.navlinks a:hover{color:var(--green)}
+    .hero{padding:82px 0 70px;display:grid;grid-template-columns:1.02fr .98fr;gap:48px;align-items:center}.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid #cfe7d9;background:#ffffffa8;border-radius:999px;color:var(--green-dark);font-size:12px;font-weight:700}
+    h1{font-size:clamp(38px,5vw,58px);line-height:1.16;letter-spacing:-2.5px;margin:22px 0 18px}h1 em{font-style:normal;color:var(--green)}.lead{font-size:17px;color:#58677a;max-width:500px;margin:0 0 28px}
+    .actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:14px 21px;border-radius:12px;font-weight:750;font-size:14px;transition:.2s}.primary{background:var(--green);color:#fff;box-shadow:0 9px 22px #05966930}.primary:hover{background:var(--green-dark);transform:translateY(-1px)}.secondary{background:#fff;border:1px solid var(--line);color:#334155}.secondary:hover{border-color:#b8d9c7}
+    .hint{font-size:12px;color:#8491a0;margin-top:14px}
+    .preview{position:relative;padding:18px;border:1px solid #ffffff;background:#ffffffa8;border-radius:24px;box-shadow:0 24px 65px #25384a12}.app{background:#f8fafc;border:1px solid #e8edf0;border-radius:16px;overflow:hidden;min-height:330px;display:grid;grid-template-columns:112px 1fr}.side{background:#fff;border-right:1px solid #edf0f2;padding:18px 12px}.sidebrand{font-size:11px;font-weight:800;margin-bottom:28px;display:flex;align-items:center;gap:6px}.mini{width:19px;height:19px;background:var(--green);border-radius:6px}.navitem{font-size:10px;color:#7b8794;padding:9px 8px;border-radius:7px;margin:5px 0}.navitem.active{background:#eaf7f0;color:var(--green-dark);font-weight:700}.main{padding:22px}.apphead{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:750}.status{font-size:9px;color:var(--green);background:#e7f7ee;padding:5px 8px;border-radius:99px}.scorebox{margin-top:18px;background:#fff;border:1px solid #edf0f2;border-radius:12px;padding:16px;display:flex;justify-content:space-between;align-items:center}.scorelabel{font-size:10px;color:#7b8794}.score{font-size:34px;font-weight:800;color:var(--green);letter-spacing:-1px}.score small{font-size:11px;color:#9aa5b1;font-weight:500}.chart{height:94px;margin-top:14px;background:#fff;border:1px solid #edf0f2;border-radius:12px;padding:12px}.chart svg{width:100%;height:100%}.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:12px}.tile{background:#fff;border:1px solid #edf0f2;border-radius:10px;padding:10px}.tile b{font-size:11px;display:block}.tile span{font-size:9px;color:#8a96a3}
+    section{padding:64px 0}.sectionhead{text-align:center;margin-bottom:32px}.sectionhead h2{font-size:30px;letter-spacing:-1px;margin:0 0 8px}.sectionhead p{margin:0;color:var(--muted);font-size:14px}.features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.feature{background:#ffffffc9;border:1px solid #e5ece7;border-radius:16px;padding:24px}.featureicon{width:42px;height:42px;border-radius:12px;background:#e8f6ee;color:var(--green);display:grid;place-items:center;font-size:20px}.feature h3{font-size:16px;margin:16px 0 6px}.feature p{font-size:13px;color:var(--muted);margin:0}
+    .download{background:#fff;border:1px solid var(--line);border-radius:22px;padding:42px;text-align:center;box-shadow:0 16px 40px #25384a0a}.download h2{font-size:29px;letter-spacing:-1px;margin:0 0 8px}.download p{color:var(--muted);font-size:14px;margin:0 0 22px}.download .hint{margin-top:13px}
+    footer{padding:28px 0 38px;color:#8793a0;font-size:12px;text-align:center}
+    @media(max-width:760px){.navlinks{display:none}.hero{grid-template-columns:1fr;padding:54px 0 42px;gap:34px}.preview{max-width:560px;width:100%;margin:auto}.features{grid-template-columns:1fr}.download{padding:30px 20px}section{padding:48px 0}.app{grid-template-columns:88px 1fr}.side{padding:14px 8px}.main{padding:15px}.tiles{gap:5px}.tile{padding:8px}}
+  </style>
+</head>
+<body>
+<header><div class="wrap nav">
+  <a class="brand" href="#"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-7-10V5l7-3 7 3v6c0 5.6-7 10-7 10Z"/><path d="m8.5 11.5 2.2 2.2 4.8-5"/></svg></span>바른자세</a>
+  <nav class="navlinks"><a href="#features">주요 기능</a><a href="#download">다운로드</a><a href="#guide">설치 안내</a></nav>
+</div></header>
+<main>
+  <div class="wrap hero">
+    <div>
+      <span class="eyebrow">● WINDOWS DESKTOP APP</span>
+      <h1>자세를 확인하고,<br><em>좋은 습관을</em> 만들어보세요.</h1>
+      <p class="lead">바른자세는 웹캠 영상으로 상체 자세를 측정하고, 분석 결과와 기록을 확인할 수 있는 데스크톱 프로그램입니다.</p>
+      <div class="actions"><a class="btn primary release-link" href="#download">Windows용 다운로드 <span>↓</span></a><a class="btn secondary" href="#features">기능 살펴보기</a></div>
+      <p class="hint">Windows용 설치 파일 · 다운로드 및 설치 안내 제공</p>
+    </div>
+    <div class="preview" aria-label="바른자세 앱 화면 예시">
+      <div class="app"><aside class="side"><div class="sidebrand"><span class="mini"></span> 바른자세</div><div class="navitem active">◉ 자세 측정</div><div class="navitem">▤ 자세 분석</div><div class="navitem">◷ 기록</div><div class="navitem">⚙ 설정</div></aside>
+        <div class="main"><div class="apphead">오늘의 자세 상태 <span class="status">● 측정 준비</span></div><div class="scorebox"><div><div class="scorelabel">자세 평가 점수</div><div class="score">-- <small>/ 20점</small></div></div><div style="font-size:30px">◎</div></div>
+          <div class="chart"><div style="font-size:9px;color:#8491a0;margin-bottom:4px">자세 변화 기록 예시</div><svg viewBox="0 0 360 65" preserveAspectRatio="none"><path d="M0 48 C30 45 38 18 70 28 S120 48 150 31 S205 13 230 27 S280 46 310 22 S340 20 360 12" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round"/><path d="M0 55H360" stroke="#e8edf0" stroke-width="1"/></svg></div>
+          <div class="tiles"><div class="tile"><b>목 기울기</b><span>자세 항목</span></div><div class="tile"><b>머리 돌출</b><span>자세 항목</span></div><div class="tile"><b>어깨 기울기</b><span>자세 항목</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <section id="features"><div class="wrap"><div class="sectionhead"><h2>바른자세의 주요 기능</h2><p>측정부터 기록 확인까지, 한 곳에서 관리하세요.</p></div>
+    <div class="features">
+      <article class="feature"><div class="featureicon">◎</div><h3>웹캠 자세 측정</h3><p>카메라를 통해 상체 자세를 측정하고 주요 자세 편차를 확인합니다.</p></article>
+      <article class="feature"><div class="featureicon">⌁</div><h3>자세 분석</h3><p>측정 결과를 점수와 항목별 분석으로 확인할 수 있습니다.</p></article>
+      <article class="feature"><div class="featureicon">◷</div><h3>측정 기록</h3><p>측정한 결과를 저장하고 날짜별 기록을 다시 살펴볼 수 있습니다.</p></article>
+    </div>
+  </div></section>
+  <section id="download"><div class="wrap"><div class="download"><h2>바른자세 시작하기</h2><p>Windows 설치 파일을 내려받아 내 컴퓨터에 설치해 보세요.</p>
+    <a class="btn primary release-link" href="https://github.com/OWNER/posture-app/releases/latest" target="_blank" rel="noopener">최신 버전 다운로드 <span>↓</span></a>
+    <p class="hint">다운로드 버튼은 GitHub Releases의 최신 설치 파일로 연결됩니다.</p>
+  </div></div></section>
+  <section id="guide"><div class="wrap"><div class="sectionhead"><h2>설치 안내</h2><p>설치 파일을 다운로드한 뒤 실행해 주세요.</p></div><div class="features">
+    <article class="feature"><h3>01. 설치 파일 다운로드</h3><p>위 다운로드 버튼을 눌러 최신 Windows 설치 파일을 받습니다.</p></article>
+    <article class="feature"><h3>02. 설치 프로그램 실행</h3><p>다운로드한 설치 파일을 실행하고 안내에 따라 설치합니다.</p></article>
+    <article class="feature"><h3>03. 카메라 권한 확인</h3><p>자세 측정을 위해 앱의 카메라 접근을 허용하고 측정을 시작합니다.</p></article>
+  </div></div></section>
+</main>
+<footer><div class="wrap">바른자세 · 웹캠 기반 상체 자세 측정 및 관리 프로그램</div></footer>
+<script>
+  // 공개 저장소 주소가 확정되면 OWNER를 실제 GitHub 사용자명으로 바꾸세요.
+  const releaseUrl = "https://github.com/OWNER/posture-app/releases/latest";
+  document.querySelectorAll(".release-link").forEach(a => a.href = releaseUrl);
+</script>
+</body></html>
