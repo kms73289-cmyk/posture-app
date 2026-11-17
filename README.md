@@ -169,4 +169,4 @@ plyer>=2.1.0
 
 ## 기술 스택
 
-- Python 3.10 · MediaPipe Pose · OpenCV · tkinter · Pillow · matplotlib
+- Python 3.10 · MediaPipe Pose · OpenCV · React · Vite · Pillow · matplotlib
